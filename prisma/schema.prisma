@@ -116,13 +116,12 @@ enum StarterSessionStatus {
 }
 
 model AIChatSession {
-  id              String                @id @default(cuid())
-  userId          String? // null until an anonymous visitor signs up mid-conversation
-  anonymousToken  String?               @unique // signed cookie value for anonymous sessions
-  trade           String? // e.g. "sähköasentaja", "putkimies"
-  status          StarterSessionStatus  @default(GATHERING_INFO)
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  id        String               @id @default(cuid())
+  userId    String? // null until an anonymous visitor signs up mid-conversation
+  trade     String? // e.g. "sähköasentaja", "putkimies"
+  status    StarterSessionStatus @default(GATHERING_INFO)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
 
   user     User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   messages AIChatMessage[]
