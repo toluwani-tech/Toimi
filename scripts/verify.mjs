@@ -80,6 +80,57 @@ await page.waitForTimeout(1000);
 const duplicateErrorVisible = await page.getByText("Sähköpostiosoite on jo käytössä.").isVisible();
 check("duplicate signup shows a friendly error instead of crashing", duplicateErrorVisible);
 
+// 10. CRM: empty state
+await page.goto("http://localhost:3000/app/customers");
+check(
+  "customers page shows empty state initially",
+  await page.getByText("Ei vielä asiakkaita.").isVisible().catch(() => false)
+);
+
+// 11. CRM: create a customer
+await page.getByRole("button", { name: "Uusi asiakas" }).click();
+await page.getByLabel("Nimi").fill("Matti Meikäläinen");
+await page.getByLabel("Sähköposti").fill("matti@example.com");
+await page.getByLabel("Puhelin").fill("0401234567");
+await page.getByLabel("Postinumero").fill("00100");
+await page.getByLabel("Kaupunki").fill("Helsinki");
+await page.getByRole("button", { name: "Lisää asiakas" }).click();
+await page.waitForURL(/\/app\/customers\/[a-z0-9]+$/, { timeout: 10000 });
+const nameHeading = page.getByRole("heading", { name: "Matti Meikäläinen" });
+await nameHeading.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("creating a customer redirects to its detail page", true, page.url());
+check("detail page shows the new customer's name", await nameHeading.isVisible());
+
+// 12. CRM: appears in list
+await page.goto("http://localhost:3000/app/customers");
+check("new customer appears in the list", await page.getByText("Matti Meikäläinen").isVisible());
+
+// 13. CRM: add a note
+await page.getByText("Matti Meikäläinen").click();
+await page.waitForURL(/\/app\/customers\/[a-z0-9]+$/);
+await page.getByPlaceholder("Lisää muistiinpano tai yhteydenoton yhteenveto…").fill("Soitti ja pyysi tarjousta.");
+await page.getByRole("button", { name: "Lisää muistiinpano" }).click();
+await page.waitForTimeout(800);
+check("note appears after adding it", await page.getByText("Soitti ja pyysi tarjousta.").isVisible());
+
+// 14. CRM: edit the customer
+await page.getByRole("button", { name: "Muokkaa" }).click();
+await page.getByLabel("Kaupunki").fill("Espoo");
+await page.getByRole("button", { name: "Tallenna muutokset" }).click();
+await page.waitForTimeout(800);
+const detailText = await page.textContent("body");
+check("edited field (city) is reflected on the detail page", detailText.includes("Espoo"));
+
+// 15. CRM: delete the customer (auto-accept the confirm dialog)
+page.once("dialog", (dialog) => dialog.accept());
+await page.getByRole("button", { name: "Poista asiakas" }).click();
+await page.waitForURL(/\/app\/customers$/, { timeout: 10000 });
+await page.getByText("Ei vielä asiakkaita.").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check(
+  "deleted customer no longer appears in the list",
+  !(await page.getByText("Matti Meikäläinen").isVisible().catch(() => false))
+);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

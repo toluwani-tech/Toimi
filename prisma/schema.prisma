@@ -28,6 +28,7 @@ model User {
   sessions       Session[]
   companyMembers CompanyMember[]
   aiChatSessions AIChatSession[]
+  customerNotes  CustomerNote[]
 }
 
 model Account {
@@ -91,7 +92,8 @@ model Company {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  members CompanyMember[]
+  members   CompanyMember[]
+  customers Customer[]
 }
 
 model CompanyMember {
@@ -158,4 +160,44 @@ model StarterPlan {
   createdAt               DateTime @default(now())
 
   session AIChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// ---------- CRM (Module 2) ----------
+
+enum CustomerType {
+  INDIVIDUAL
+  ORGANIZATION
+}
+
+model Customer {
+  id         String       @id @default(cuid())
+  companyId  String
+  type       CustomerType @default(INDIVIDUAL)
+  name       String
+  email      String?
+  phone      String?
+  businessId String? // Y-tunnus, organization customers only
+  street     String?
+  postalCode String?
+  city       String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  notes   CustomerNote[]
+
+  @@index([companyId])
+}
+
+model CustomerNote {
+  id         String   @id @default(cuid())
+  customerId String
+  authorId   String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
 }
