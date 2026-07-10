@@ -16,13 +16,13 @@ export function Nav() {
           Toimi
         </Link>
         <nav className="flex items-center gap-2">
-          <Button variant="ghost" render={<Link href="/starter" />}>
+          <Button variant="ghost" nativeButton={false} render={<Link href="/starter" />}>
             Aloita yrittäjänä
           </Button>
           <ThemeToggle />
           {status === "authenticated" ? (
             <>
-              <Button variant="ghost" render={<Link href="/app" />}>
+              <Button variant="ghost" nativeButton={false} render={<Link href="/app" />}>
                 Sovellus
               </Button>
               <Button variant="outline" onClick={() => signOut({ callbackUrl: "/" })}>
@@ -31,10 +31,12 @@ export function Nav() {
             </>
           ) : (
             <>
-              <Button variant="ghost" render={<Link href="/login" />}>
+              <Button variant="ghost" nativeButton={false} render={<Link href="/login" />}>
                 Kirjaudu
               </Button>
-              <Button render={<Link href="/signup" />}>Luo tili</Button>
+              <Button nativeButton={false} render={<Link href="/signup" />}>
+                Luo tili
+              </Button>
             </>
           )}
         </nav>

@@ -14,7 +14,10 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
 ## Prerequisites
 
 - Node.js 20.9+ (LTS recommended)
-- A PostgreSQL database — [Neon](https://neon.tech) free tier works well and needs no local install
+- A PostgreSQL database — either:
+  - [Neon](https://neon.tech) free tier (recommended for anything beyond solo local dev), or
+  - `npx prisma dev` — Prisma's own local dev Postgres, zero account needed. Prints a
+    `DATABASE_URL` to use; keep it running in another terminal (or `-d` to background it).
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
@@ -36,11 +39,17 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    | `OPENAI_API_KEY` | AI Starter advisor | Required for `/starter` to work |
    | `OPENAI_MODEL` | AI Starter advisor | Optional override; defaults to `gpt-5.5-mini` — verify this model is available on your account and adjust if not |
 
-3. Run the first migration against your database:
+3. Apply the schema to your database:
 
    ```bash
    npx prisma migrate dev --name init
    ```
+
+   If you're using `npx prisma dev`'s local server, `migrate dev` may fail with `P1017
+   Server has closed the connection` — that's a shadow-database quirk of the local dev
+   proxy, not your schema. Use `npx prisma db push` instead in that case (applies the
+   schema directly, no migration history file). Against Neon or any real Postgres,
+   `migrate dev` works normally and is what you want for real migration history.
 
 4. Start the dev server:
 
@@ -57,11 +66,20 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
 ```bash
 npm run test        # Vitest — unit tests for the starter state machine, prompt, and schemas
 npm run test:e2e     # Playwright — full anonymous-chat-to-plan smoke test
+npm run verify       # Browser-driven smoke check of auth/RBAC/starter-session foundation
 ```
 
 The Playwright test hits the real OpenAI API and a real database (no mocks — that's the
 point of a smoke test), so it auto-skips unless `DATABASE_URL` and `OPENAI_API_KEY` are
 both configured with real values.
+
+`npm run verify` (`scripts/verify.mjs`) only needs `DATABASE_URL` — it drives a real
+Chromium browser through the landing page, theme toggle, `/app` RBAC redirect, anonymous
+`/starter` session + cookie persistence, signup → login → dashboard, duplicate-signup
+error handling, and confirms the anonymous starter session gets linked to the new user on
+signup. It intentionally doesn't need `OPENAI_API_KEY` (it accepts that the chat call
+returns a friendly 502 without a key), so it's the fast/cheap way to confirm the
+foundation works before wiring up a real OpenAI key.
 
 ## Other useful commands
 

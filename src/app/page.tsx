@@ -33,10 +33,10 @@ export default function Home() {
           laskutustyökalut yhteen suomenkieliseen sovellukseen.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button size="lg" render={<Link href="/starter" />}>
+          <Button size="lg" nativeButton={false} render={<Link href="/starter" />}>
             Aloita ilmaiseksi
           </Button>
-          <Button size="lg" variant="outline" render={<Link href="/signup" />}>
+          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/signup" />}>
             Luo tili
           </Button>
         </div>
