@@ -114,6 +114,8 @@ export function ChatClient() {
           messages.map((m) => (
             <div
               key={m.id}
+              data-testid="chat-message"
+              data-role={m.role}
               className={cn("flex items-start gap-3", m.role === "user" && "flex-row-reverse")}
             >
               <Avatar className="size-8 shrink-0">
@@ -132,7 +134,7 @@ export function ChatClient() {
             </div>
           ))
         )}
-        {sending && <Skeleton className="h-10 w-2/3" />}
+        {sending && <Skeleton data-testid="chat-loading" className="h-10 w-2/3" />}
         <div ref={bottomRef} />
       </div>
 
