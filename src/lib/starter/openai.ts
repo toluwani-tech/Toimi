@@ -20,9 +20,9 @@ function getClient(): OpenAI {
   return client;
 }
 
-// Cost-effective tier by default — override via OPENAI_MODEL once you've checked
-// current model availability/pricing for your account.
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.5-mini";
+// Cost-effective tier by default — verified available on the account this was built
+// against (2026-07-10). Override via OPENAI_MODEL if it's since been superseded.
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.4-mini";
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 

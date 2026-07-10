@@ -152,9 +152,9 @@ export function ChatClient() {
           }}
           placeholder="Kirjoita viestisi…"
           rows={2}
-          disabled={sending}
+          disabled={loading || sending}
         />
-        <Button onClick={sendMessage} disabled={sending || !input.trim()}>
+        <Button onClick={sendMessage} disabled={loading || sending || !input.trim()}>
           Lähetä
         </Button>
       </div>

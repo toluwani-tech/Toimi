@@ -32,7 +32,9 @@ export default async function AppDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Seuraavaksi rakennettavat moduulit</CardTitle>
+          <CardTitle>
+            <h2>Seuraavaksi rakennettavat moduulit</h2>
+          </CardTitle>
           <CardDescription>
             Nämä ominaisuudet tulevat myöhemmissä vaiheissa. Toistaiseksi ilmainen
             AI-neuvonantaja on käytettävissä.

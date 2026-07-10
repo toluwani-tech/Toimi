@@ -18,7 +18,9 @@ export default function SignupPage() {
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Luo tili</CardTitle>
+          <CardTitle>
+            <h1>Luo tili</h1>
+          </CardTitle>
           <CardDescription>Aloita Toimin käyttö veloituksetta.</CardDescription>
         </CardHeader>
         <CardContent>

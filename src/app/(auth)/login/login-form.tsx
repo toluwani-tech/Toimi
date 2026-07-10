@@ -41,7 +41,9 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Kirjaudu sisään</CardTitle>
+          <CardTitle>
+            <h1>Kirjaudu sisään</h1>
+          </CardTitle>
           <CardDescription>Jatka trades-liiketoimintasi hallintaa.</CardDescription>
         </CardHeader>
         <CardContent>

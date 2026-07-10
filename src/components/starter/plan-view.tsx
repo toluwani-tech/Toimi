@@ -17,13 +17,24 @@ const companyFormLabel: Record<StarterPlanData["companyFormRecommendation"], str
   UNDECIDED: "Ei vielä päätetty",
 };
 
+// CardTitle renders a <div>, not a semantic heading (shadcn/Base UI default here) — wrap
+// its text in an actual heading so the plan sections are navigable via screen readers
+// and testable via getByRole("heading").
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <CardTitle>
+      <h3>{children}</h3>
+    </CardTitle>
+  );
+}
+
 export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <CardTitle>Suositeltu yritysmuoto</CardTitle>
+            <SectionTitle>Suositeltu yritysmuoto</SectionTitle>
             <Badge>{companyFormLabel[plan.companyFormRecommendation]}</Badge>
           </div>
           <CardDescription>{plan.companyFormReasoning}</CardDescription>
@@ -32,7 +43,7 @@ export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Rekisteröintilista</CardTitle>
+          <SectionTitle>Rekisteröintilista</SectionTitle>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-3">
@@ -53,7 +64,7 @@ export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>ALV ja YEL</CardTitle>
+          <SectionTitle>ALV ja YEL</SectionTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{plan.vatYelSummary}</p>
@@ -62,7 +73,7 @@ export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Vakuutukset ja luvat</CardTitle>
+          <SectionTitle>Vakuutukset ja luvat</SectionTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{plan.insurancePermitNotes}</p>
@@ -71,7 +82,7 @@ export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Hinnoittelu</CardTitle>
+          <SectionTitle>Hinnoittelu</SectionTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{plan.pricingGuidance}</p>
@@ -80,7 +91,7 @@ export function StarterPlanView({ plan }: { plan: StarterPlanData }) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Seuraavat askeleet</CardTitle>
+          <SectionTitle>Seuraavat askeleet</SectionTitle>
         </CardHeader>
         <CardContent>
           <ul className="list-inside list-disc text-sm text-muted-foreground">
