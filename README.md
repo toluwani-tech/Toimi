@@ -32,7 +32,11 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    npm install
    ```
 
-2. Copy `.env` and fill in real values:
+2. Copy `.env.example` to `.env` and fill in real values:
+
+   ```bash
+   cp .env.example .env
+   ```
 
    | Variable | Required for | Notes |
    |---|---|---|
