@@ -421,6 +421,51 @@ check(
   !(await page.getByText("Kaapelit, liittimet ja putket").isVisible().catch(() => false))
 );
 
+// 42. Reports: create a persistent expense (not deleted) linked to the quote-converted
+// job ("Keittiöremontti"), in a distinct category, so the reports checks below have known
+// figures to assert against. Leaves the date field on its today-default (Module 8's fix).
+await page.goto("http://localhost:3000/app/expenses/new");
+await page.getByLabel("Kategoria").click();
+await page.getByRole("option", { name: "Kalusto" }).click();
+await page.getByLabel("Kuvaus").fill("Poravasara vuokraus");
+await page.getByLabel("Summa (€)").fill("30");
+await page.getByLabel("Toimittaja (valinnainen)").fill("Cramo");
+await page.getByLabel("Liitetty työ (valinnainen)").click();
+await page.getByRole("option", { name: "Keittiöremontti", exact: true }).click();
+await clickAndWaitForUrl(page.getByRole("button", { name: "Lisää kulu" }), /\/app\/expenses$/);
+check("creating the reports-verification expense redirects to the expense list", true, page.url());
+
+// 43. Reports: monthly profit, category breakdown, top customers, job profitability
+// Expected figures: job "Keittiöremontti" has an invoice (from step 37, copied from the
+// accepted quote: 180,00 EUR total) and now one linked expense (30,00 EUR) -> profit
+// 150,00 EUR. This month's payments total 200,00 EUR (from the fully-paid invoice in
+// steps 34-35) and this month's only expense is the 30,00 EUR one just created ->
+// Tulos tässä kuussa = 170,00 EUR.
+await page.goto("http://localhost:3000/app/reports");
+check("reports page loads", await page.getByRole("heading", { name: "Raportit" }).isVisible());
+
+const kalustoRowText = await page.getByTestId("expense-category-EQUIPMENT").textContent();
+check(
+  "expense category breakdown shows Kalusto with the correct total",
+  kalustoRowText?.includes("30,00") ?? false,
+  kalustoRowText ?? "(missing)"
+);
+
+check(
+  "top customers table includes the test customer",
+  await page.getByText("Kirvesmies Oy").first().isVisible()
+);
+
+check(
+  "job profitability table shows the quote-converted job",
+  await page.getByRole("cell", { name: "Keittiöremontti", exact: true }).isVisible()
+);
+check("job profitability shows the expected revenue", await page.getByRole("cell", { name: "180,00" }).isVisible());
+check("job profitability shows the expected expense", await page.getByRole("cell", { name: "30,00" }).isVisible());
+check("job profitability shows the expected profit", await page.getByRole("cell", { name: "150,00" }).isVisible());
+
+check("monthly profit stat shows the expected figure", await page.getByText("170,00").isVisible());
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

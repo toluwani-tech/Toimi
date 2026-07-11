@@ -1,9 +1,9 @@
 # Toimi
 
 Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
-management (CRM), quoting, job/schedule tracking, invoicing with payment tracking, and
-expense tracking.
-This repo currently covers **Phase 0 (foundation)** through **Module 8 (Expenses)** — see
+management (CRM), quoting, job/schedule tracking, invoicing with payment tracking, expense
+tracking, and business reports.
+This repo currently covers **Phase 0 (foundation)** through **Module 9 (Reports)** — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -62,8 +62,8 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
 
    Visit [http://localhost:3000](http://localhost:3000). The landing page, `/signup`,
    `/login`, the free `/starter` AI advisor, `/app/customers`, `/app/quotes`, `/app/jobs`,
-   `/app/schedule`, `/app/invoices`, and `/app/expenses` should all work once the env vars
-   above are set.
+   `/app/schedule`, `/app/invoices`, `/app/expenses`, and `/app/reports` should all work
+   once the env vars above are set.
 
 ### Local dev database connection pooling
 
@@ -100,11 +100,14 @@ line items → mark sent → record a partial payment and confirm status stays S
 correct remaining balance → record a second payment that completes the total and confirm
 status auto-flips to PAID → download and validate the PDF → create an invoice from the
 same accepted quote and confirm it's pre-filled correctly, independent of the job already
-created from it), and a full expense lifecycle (create an expense linked to an existing
-job → confirm it appears in the list and in the "this month" stats total → edit its
-description → delete it). It intentionally doesn't need `OPENAI_API_KEY` (it accepts that
-the starter chat call returns a friendly 502 without a key), so it's the fast/cheap way to
-confirm everything except the AI itself works.
+created from it), a full expense lifecycle (create an expense linked to an existing job →
+confirm it appears in the list and in the "this month" stats total → edit its description
+→ delete it), and a reports check (create one more persisted expense linked to the
+quote-converted job → confirm the expense-category breakdown, top-customers table, and
+job-profitability figures on `/app/reports` match hand-computed expected values). It
+intentionally doesn't need `OPENAI_API_KEY` (it accepts that the starter chat call returns
+a friendly 502 without a key), so it's the fast/cheap way to confirm everything except the
+AI itself works.
 
 Note: the dev server occasionally surfaces a one-off `Failed to fetch` on a Server Action
 that actually completes successfully server-side (confirmed via direct DB checks) — a
@@ -140,6 +143,7 @@ src/
       schedule/                   — week-view schedule (plain grid, no calendar library)
       invoices/                   — Invoices: list (+ stats), create, detail (+ payments), edit, PDF route
       expenses/                   — Expenses: list (+ stats), create, edit, inline delete
+      reports/                     — Reports: monthly revenue/expenses, category breakdown, top customers, job profitability
     starter/                      — free AI Business Starter chat
     api/auth/[...nextauth]        — Auth.js route handler
     api/starter/{chat,plan}       — AI Starter endpoints
@@ -155,6 +159,7 @@ src/
     jobs/                         — status transitions, schemas
     invoices/                     — status transitions (incl. derived overdue), schemas, PDF generation
     expenses/                     — schema (no status workflow — see plan doc for why)
+    reports/                     — pure aggregation functions (monthly buckets, category sums)
 prisma/schema.prisma              — data model (see plan doc for why receipt photo
                                      upload/S3 isn't modeled yet)
 e2e/                              — Playwright specs

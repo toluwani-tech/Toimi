@@ -14,18 +14,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-
-const categoryLabel = {
-  MATERIAL: "Materiaali",
-  FUEL: "Polttoaine",
-  EQUIPMENT: "Kalusto",
-  OTHER: "Muu",
-} as const;
+import { expenseCategoryLabel } from "@/lib/expenses/labels";
 
 const NO_JOB = "none";
 
 export type ExpenseFormValues = {
-  category: keyof typeof categoryLabel;
+  category: keyof typeof expenseCategoryLabel;
   description: string;
   amountEuros: string;
   vendor: string;
@@ -48,7 +42,7 @@ export function ExpenseForm({
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
-  const categoryItems = categoryLabel;
+  const categoryItems = expenseCategoryLabel;
   const jobItems = { [NO_JOB]: "Ei liitettyä työtä", ...Object.fromEntries(jobs.map((j) => [j.id, j.title])) };
 
   return (
@@ -60,7 +54,7 @@ export function ExpenseForm({
             <SelectValue placeholder="Valitse kategoria" />
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(categoryLabel).map(([value, label]) => (
+            {Object.entries(expenseCategoryLabel).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>

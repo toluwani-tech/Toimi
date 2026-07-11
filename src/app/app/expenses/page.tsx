@@ -6,16 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteExpenseButton } from "@/components/expenses/delete-expense-button";
+import { expenseCategoryLabel } from "@/lib/expenses/labels";
 import { formatEuros } from "@/lib/money";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/rbac";
-
-const categoryLabel = {
-  MATERIAL: "Materiaali",
-  FUEL: "Polttoaine",
-  EQUIPMENT: "Kalusto",
-  OTHER: "Muu",
-} as const;
 
 export default async function ExpensesPage() {
   const { company } = await requireCompany();
@@ -74,7 +68,7 @@ export default async function ExpensesPage() {
                     {new Intl.DateTimeFormat("fi-FI", { dateStyle: "short" }).format(expense.incurredAt)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{categoryLabel[expense.category]}</Badge>
+                    <Badge variant="secondary">{expenseCategoryLabel[expense.category]}</Badge>
                   </TableCell>
                   <TableCell className="font-medium">
                     <Link href={`/app/expenses/${expense.id}/edit`} className="hover:underline">
