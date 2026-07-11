@@ -29,6 +29,7 @@ model User {
   companyMembers CompanyMember[]
   aiChatSessions AIChatSession[]
   customerNotes  CustomerNote[]
+  jobAssignments JobAssignee[]
 }
 
 model Account {
@@ -95,6 +96,7 @@ model Company {
   members   CompanyMember[]
   customers Customer[]
   quotes    Quote[]
+  jobs      Job[]
 }
 
 model CompanyMember {
@@ -187,6 +189,7 @@ model Customer {
   company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   notes   CustomerNote[]
   quotes  Quote[]
+  jobs    Job[]
 
   @@index([companyId])
 }
@@ -237,6 +240,7 @@ model Quote {
   company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   customer Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items    QuoteLineItem[]
+  jobs     Job[]
 
   @@unique([companyId, number])
   @@index([companyId])
@@ -254,4 +258,61 @@ model QuoteLineItem {
   quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
 
   @@index([quoteId, position])
+}
+
+// ---------- Jobs & Scheduling (Module 4/5) ----------
+
+enum JobStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  companyId  String
+  customerId String
+  quoteId    String?
+  title      String
+  status     JobStatus @default(SCHEDULED)
+  startAt    DateTime
+  endAt      DateTime?
+  street     String?
+  postalCode String?
+  city       String?
+  notes      String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  company   Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer  Customer      @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quote     Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  assignees JobAssignee[]
+  tasks     JobTask[]
+
+  @@index([companyId, startAt])
+}
+
+model JobAssignee {
+  id     String @id @default(cuid())
+  jobId  String
+  userId String
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+}
+
+model JobTask {
+  id          String  @id @default(cuid())
+  jobId       String
+  description String
+  done        Boolean @default(false)
+  position    Int     @default(0)
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, position])
 }

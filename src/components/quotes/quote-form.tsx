@@ -42,6 +42,9 @@ export function QuoteForm({
 }) {
   const [state, formAction, pending] = useActionState(action, initialState);
   const [items, setItems] = useState<EditableLineItem[]>(defaultValues?.items ?? [newLineItem()]);
+  // Select.Value only resolves an item's label from a value without opening the popup
+  // once if Select.Root is given an explicit items map.
+  const customerItems = Object.fromEntries(customers.map((c) => [c.id, c.name]));
 
   const itemsJson = JSON.stringify(
     items.map((item) => ({
@@ -70,7 +73,7 @@ export function QuoteForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="customerId">Asiakas</Label>
-        <Select name="customerId" defaultValue={defaultValues?.customerId}>
+        <Select name="customerId" items={customerItems} defaultValue={defaultValues?.customerId}>
           <SelectTrigger id="customerId" className="w-full">
             <SelectValue placeholder="Valitse asiakas" />
           </SelectTrigger>

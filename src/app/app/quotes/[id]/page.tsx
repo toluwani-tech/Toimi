@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { convertQuoteToJob } from "@/app/app/jobs/actions";
 import {
   deleteQuote,
   markQuoteAccepted,
@@ -42,6 +43,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   });
   if (!quote) notFound();
 
+  const existingJob = quote.status === "ACCEPTED" ? await db.job.findFirst({ where: { quoteId: quote.id } }) : null;
+
   const totals = calculateQuoteTotals(quote.items, {
     discountPercent: quote.discountPercent,
     vatRatePercent: quote.vatRatePercent,
@@ -52,6 +55,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const acceptAction = markQuoteAccepted.bind(null, quote.id);
   const rejectAction = markQuoteRejected.bind(null, quote.id);
   const deleteAction = deleteQuote.bind(null, quote.id);
+  const convertAction = convertQuoteToJob.bind(null, quote.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,6 +82,16 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
               <DeleteQuoteButton action={deleteAction} />
             </>
           )}
+          {quote.status === "ACCEPTED" &&
+            (existingJob ? (
+              <Button nativeButton={false} render={<Link href={`/app/jobs/${existingJob.id}`} />}>
+                Avaa työ →
+              </Button>
+            ) : (
+              <form action={convertAction}>
+                <Button type="submit">Muunna työksi</Button>
+              </form>
+            ))}
         </div>
       </div>
 

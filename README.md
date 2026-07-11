@@ -1,9 +1,9 @@
 # Toimi
 
 Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
-management (CRM), and quoting, with scheduling/invoicing/etc. still to come. This repo
-currently covers **Phase 0 (foundation)**, **Module 1 (AI Business Starter)**, **Module 2
-(CRM)**, and **Module 3 (Quotes)** — see
+management (CRM), quoting, and job/schedule tracking, with invoicing/etc. still to come.
+This repo currently covers **Phase 0 (foundation)**, **Module 1 (AI Business Starter)**,
+**Module 2 (CRM)**, **Module 3 (Quotes)**, and **Module 4/5 (Jobs & Scheduling)** — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -61,8 +61,8 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    ```
 
    Visit [http://localhost:3000](http://localhost:3000). The landing page, `/signup`,
-   `/login`, the free `/starter` AI advisor, `/app/customers`, and `/app/quotes` should all
-   work once the env vars above are set.
+   `/login`, the free `/starter` AI advisor, `/app/customers`, `/app/quotes`, `/app/jobs`,
+   and `/app/schedule` should all work once the env vars above are set.
 
 ### Local dev database connection pooling
 
@@ -89,11 +89,21 @@ both configured with real values.
 `npm run verify` (`scripts/verify.mjs`) only needs `DATABASE_URL` — it drives a real
 Chromium browser through the landing page, theme toggle, `/app` RBAC redirect, anonymous
 `/starter` session + cookie persistence, signup → login → dashboard, duplicate-signup
-error handling, full customer CRUD (create/list/detail/note/edit/delete), and a full quote
+error handling, full customer CRUD (create/list/detail/note/edit/delete), a full quote
 lifecycle (create with line items → verify computed totals → download and validate the PDF
-→ mark sent → accept → confirm a non-DRAFT quote can't be edited). It intentionally doesn't
-need `OPENAI_API_KEY` (it accepts that the starter chat call returns a friendly 502 without
-a key), so it's the fast/cheap way to confirm everything except the AI itself works.
+→ mark sent → accept → confirm a non-DRAFT quote can't be edited), and a full job
+lifecycle (create with an initial task → appears in the list and on the week schedule →
+toggle a task → walk SCHEDULED → IN_PROGRESS → COMPLETED → confirm a COMPLETED job can't
+be edited → convert an accepted quote into a job and confirm it's pre-filled correctly). It
+intentionally doesn't need `OPENAI_API_KEY` (it accepts that the starter chat call returns
+a friendly 502 without a key), so it's the fast/cheap way to confirm everything except the
+AI itself works.
+
+Note: the dev server occasionally surfaces a one-off `Failed to fetch` on a Server Action
+that actually completes successfully server-side (confirmed via direct DB checks) — a
+Turbopack/dev-server timing quirk, not an app bug. `scripts/verify.mjs`'s
+`clickAndWaitForUrl` helper retries once to absorb this; if you see it fail twice in a row,
+that's worth investigating for real.
 
 ## Other useful commands
 
@@ -112,18 +122,21 @@ src/
     app/                          — authenticated shell (requires sign-in)
       customers/                  — CRM: list, create, detail (+ notes), edit
       quotes/                     — Quotes: list, create, detail (+ status actions), edit, PDF route
+      jobs/                       — Jobs: list, create, detail (+ status, tasks), edit
+      schedule/                   — week-view schedule (plain grid, no calendar library)
     starter/                      — free AI Business Starter chat
     api/auth/[...nextauth]        — Auth.js route handler
     api/starter/{chat,plan}       — AI Starter endpoints
   components/
-    ui/                           — shadcn/ui primitives
-    starter/, customers/, quotes/ — feature-specific components
+    ui/                                    — shadcn/ui primitives
+    starter/, customers/, quotes/, jobs/   — feature-specific components
   lib/
     auth.ts, rbac.ts, db.ts       — auth config, RBAC guards, Prisma client
     starter/                      — knowledge base, state machine, OpenAI wrapper, schemas
     customers/                    — customer form validation
     quotes/                       — totals calculation, status transitions, schemas, PDF generation
-prisma/schema.prisma              — data model (see plan doc for why Jobs/Invoices/etc.
+    jobs/                         — status transitions, schemas
+prisma/schema.prisma              — data model (see plan doc for why Invoices/Expenses/etc.
                                      aren't modeled yet)
 e2e/                              — Playwright specs
 scripts/verify.mjs                — browser-driven smoke check (see Testing above)

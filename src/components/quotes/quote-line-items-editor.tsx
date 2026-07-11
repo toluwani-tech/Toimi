@@ -23,6 +23,10 @@ export function newLineItem(): EditableLineItem {
   return { type: "LABOR", description: "", quantity: "1", unitPrice: "" };
 }
 
+// Select.Value only resolves an item's label from a value without opening the popup
+// once if Select.Root is given an explicit items map.
+const typeItems = { LABOR: "Työ", MATERIAL: "Materiaali" };
+
 export function QuoteLineItemsEditor({
   items,
   onChange,
@@ -40,6 +44,7 @@ export function QuoteLineItemsEditor({
         <div key={index} className="grid grid-cols-12 items-center gap-2">
           <div className="col-span-2">
             <Select
+              items={typeItems}
               value={item.type}
               onValueChange={(value) => updateItem(index, { type: value as EditableLineItem["type"] })}
             >

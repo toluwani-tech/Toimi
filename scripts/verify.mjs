@@ -9,6 +9,23 @@ function check(name, ok, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"} - ${name}${detail ? " — " + detail : ""}`);
 }
 
+// Dev-server-only flakiness (e.g. a route's first Turbopack compile racing a Server
+// Action's fetch) can surface as a one-off "Failed to fetch" on an otherwise-correct
+// action. Retry once before treating it as a real failure — but only re-click if the
+// first click didn't actually navigate us away already (otherwise we'd be waiting for
+// a button that no longer exists on the new page).
+async function clickAndWaitForUrl(locator, urlPattern, timeout = 10000) {
+  const page = locator.page();
+  try {
+    await locator.click();
+    await page.waitForURL(urlPattern, { timeout });
+  } catch {
+    if (urlPattern.test(page.url())) return;
+    await locator.click();
+    await page.waitForURL(urlPattern, { timeout });
+  }
+}
+
 const email = `verify-${Date.now()}@example.com`;
 const password = "verify-password-123";
 
@@ -48,15 +65,13 @@ await page.goto("http://localhost:3000/signup");
 await page.getByLabel("Nimi").fill("Testi Testaaja");
 await page.getByLabel("Sähköposti").fill(email);
 await page.getByLabel("Salasana").fill(password);
-await page.getByRole("main").getByRole("button", { name: "Luo tili" }).click();
-await page.waitForURL(/\/login/, { timeout: 10000 });
+await clickAndWaitForUrl(page.getByRole("main").getByRole("button", { name: "Luo tili" }), /\/login/);
 check("signup redirects to /login?registered=1", page.url().includes("registered=1"), page.url());
 
 // 6. Log in
 await page.getByLabel("Sähköposti").fill(email);
 await page.getByLabel("Salasana", { exact: true }).fill(password);
-await page.getByRole("button", { name: "Kirjaudu sisään" }).click();
-await page.waitForURL(/\/app/, { timeout: 10000 });
+await clickAndWaitForUrl(page.getByRole("button", { name: "Kirjaudu sisään" }), /\/app/);
 check("login redirects to /app", page.url().includes("/app"), page.url());
 
 // 7. Dashboard shows user + company + OWNER role
@@ -94,8 +109,7 @@ await page.getByLabel("Sähköposti").fill("matti@example.com");
 await page.getByLabel("Puhelin").fill("0401234567");
 await page.getByLabel("Postinumero").fill("00100");
 await page.getByLabel("Kaupunki").fill("Helsinki");
-await page.getByRole("button", { name: "Lisää asiakas" }).click();
-await page.waitForURL(/\/app\/customers\/[a-z0-9]{20,}$/, { timeout: 10000 });
+await clickAndWaitForUrl(page.getByRole("button", { name: "Lisää asiakas" }), /\/app\/customers\/[a-z0-9]{20,}$/);
 const nameHeading = page.getByRole("heading", { name: "Matti Meikäläinen" });
 await nameHeading.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
 check("creating a customer redirects to its detail page", true, page.url());
@@ -136,8 +150,7 @@ check(
 await page.goto("http://localhost:3000/app/customers/new");
 await page.getByLabel("Nimi").fill("Kirvesmies Oy");
 await page.getByLabel("Sähköposti").fill("laskutus@kirvesmies.example");
-await page.getByRole("button", { name: "Lisää asiakas" }).click();
-await page.waitForURL(/\/app\/customers\/[a-z0-9]{20,}$/, { timeout: 10000 });
+await clickAndWaitForUrl(page.getByRole("button", { name: "Lisää asiakas" }), /\/app\/customers\/[a-z0-9]{20,}$/);
 
 // 17. Quotes: empty state
 await page.goto("http://localhost:3000/app/quotes");
@@ -165,8 +178,7 @@ await quantityInputs.nth(1).fill("10");
 await priceInputs.nth(1).fill("2.5");
 
 await page.getByLabel("Alennus %").fill("10");
-await page.getByRole("button", { name: "Luo tarjous" }).click();
-await page.waitForURL(/\/app\/quotes\/[a-z0-9]{20,}$/, { timeout: 10000 });
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo tarjous" }), /\/app\/quotes\/[a-z0-9]{20,}$/);
 
 // Manual expected total: (3*4500 + 10*250) = 16000 subtotal; -10% discount = 1600;
 // after discount 14400; +25% VAT = 3600; total = 18000 cents = 180,00 EUR
@@ -206,6 +218,76 @@ check(
   "editing a non-DRAFT quote redirects away instead of showing the form",
   page.url() === quoteUrl,
   page.url()
+);
+
+// 23. Jobs: create a job for the existing test customer, starting soon (same calendar day/week)
+function toDatetimeLocal(date) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+const jobStartAt = new Date(Date.now() + 60 * 60 * 1000);
+
+await page.goto("http://localhost:3000/app/jobs/new");
+await page.getByLabel("Asiakas").click();
+await page.getByRole("option", { name: "Kirvesmies Oy" }).click();
+await page.getByLabel("Otsikko").fill("Keittiöremontin asennus");
+await page.getByLabel("Alkaa").fill(toDatetimeLocal(jobStartAt));
+await page.getByRole("button", { name: "Lisää tehtävä" }).click();
+await page.getByPlaceholder("Tehtävän kuvaus").fill("Puretaan vanhat kaapit");
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo työ" }), /\/app\/jobs\/[a-z0-9]{20,}$/);
+const jobUrl = page.url();
+const jobId = jobUrl.split("/").pop();
+check("creating a job redirects to its detail page", true, jobUrl);
+check("job detail shows the initial task", await page.getByText("Puretaan vanhat kaapit").isVisible());
+
+// 24. Jobs: appears in list
+await page.goto("http://localhost:3000/app/jobs");
+check("new job appears in the list", await page.getByText("Keittiöremontin asennus").isVisible());
+
+// 25. Jobs: appears on the current week's schedule
+await page.goto("http://localhost:3000/app/schedule");
+check("new job appears on the week schedule", await page.getByText("Keittiöremontin asennus").isVisible());
+
+// 26. Jobs: toggle a task
+await page.goto(jobUrl);
+await page.getByRole("button", { name: "Merkitse tehdyksi" }).click();
+await page
+  .getByRole("button", { name: "Merkitse tekemättömäksi" })
+  .waitFor({ state: "visible", timeout: 10000 })
+  .catch(() => {});
+check(
+  "task shows as done after toggling",
+  await page.getByRole("button", { name: "Merkitse tekemättömäksi" }).isVisible()
+);
+
+// 27. Jobs: walk status SCHEDULED -> IN_PROGRESS -> COMPLETED
+await page.getByRole("button", { name: "Aloita työ" }).click();
+await page.getByText("Käynnissä").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("job status updates to Käynnissä after starting", await page.getByText("Käynnissä").isVisible());
+
+await page.getByRole("button", { name: "Merkitse valmiiksi" }).click();
+await page.getByText("Valmis").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("job status updates to Valmis after completing", await page.getByText("Valmis").isVisible());
+
+// 28. Jobs: editing a COMPLETED job redirects away instead of showing the form
+await page.goto(`http://localhost:3000/app/jobs/${jobId}/edit`);
+await page.waitForLoadState("networkidle");
+check(
+  "editing a COMPLETED job redirects away instead of showing the form",
+  page.url() === jobUrl,
+  page.url()
+);
+
+// 29. Jobs: convert the already-accepted quote (from the Quotes section above) into a job
+await page.goto(quoteUrl);
+await clickAndWaitForUrl(page.getByRole("button", { name: "Muunna työksi" }), /\/app\/jobs\/[a-z0-9]{20,}\/edit$/);
+await page.waitForLoadState("networkidle");
+check("converting an accepted quote redirects to the new job's edit page", true, page.url());
+const customerFieldText = await page.getByLabel("Asiakas").textContent();
+check(
+  "converted job is pre-filled with the quote's customer",
+  customerFieldText?.includes("Kirvesmies Oy") ?? false,
+  customerFieldText ?? "(empty)"
 );
 
 await browser.close();

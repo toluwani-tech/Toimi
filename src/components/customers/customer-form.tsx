@@ -27,6 +27,11 @@ type CustomerFormValues = {
 
 const initialState: CustomerFormState = { error: null };
 
+// Select.Value only resolves an item's label from a value without opening the popup
+// once if Select.Root is given an explicit items map — otherwise it shows the raw
+// value until the user opens the dropdown at least once.
+const typeItems = { INDIVIDUAL: "Henkilö", ORGANIZATION: "Yritys" };
+
 export function CustomerForm({
   action,
   defaultValues,
@@ -42,7 +47,7 @@ export function CustomerForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="type">Tyyppi</Label>
-        <Select name="type" defaultValue={defaultValues?.type ?? "INDIVIDUAL"}>
+        <Select name="type" items={typeItems} defaultValue={defaultValues?.type ?? "INDIVIDUAL"}>
           <SelectTrigger id="type" className="w-full">
             <SelectValue />
           </SelectTrigger>
