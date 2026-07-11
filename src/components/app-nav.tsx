@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/app", label: "Yleiskatsaus" },
   { href: "/app/customers", label: "Asiakkaat" },
+  { href: "/app/quotes", label: "Tarjoukset" },
 ];
 
 export function AppNav() {

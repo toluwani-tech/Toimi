@@ -95,7 +95,7 @@ await page.getByLabel("Puhelin").fill("0401234567");
 await page.getByLabel("Postinumero").fill("00100");
 await page.getByLabel("Kaupunki").fill("Helsinki");
 await page.getByRole("button", { name: "Lisää asiakas" }).click();
-await page.waitForURL(/\/app\/customers\/[a-z0-9]+$/, { timeout: 10000 });
+await page.waitForURL(/\/app\/customers\/[a-z0-9]{20,}$/, { timeout: 10000 });
 const nameHeading = page.getByRole("heading", { name: "Matti Meikäläinen" });
 await nameHeading.waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
 check("creating a customer redirects to its detail page", true, page.url());
@@ -114,10 +114,11 @@ await page.waitForTimeout(800);
 check("note appears after adding it", await page.getByText("Soitti ja pyysi tarjousta.").isVisible());
 
 // 14. CRM: edit the customer
+const editUrl = page.url();
 await page.getByRole("button", { name: "Muokkaa" }).click();
 await page.getByLabel("Kaupunki").fill("Espoo");
 await page.getByRole("button", { name: "Tallenna muutokset" }).click();
-await page.waitForTimeout(800);
+await page.waitForURL(editUrl, { timeout: 10000 });
 const detailText = await page.textContent("body");
 check("edited field (city) is reflected on the detail page", detailText.includes("Espoo"));
 
@@ -129,6 +130,82 @@ await page.getByText("Ei vielä asiakkaita.").waitFor({ state: "visible", timeou
 check(
   "deleted customer no longer appears in the list",
   !(await page.getByText("Matti Meikäläinen").isVisible().catch(() => false))
+);
+
+// 16. Quotes: create a customer to quote against (the earlier one was deleted above)
+await page.goto("http://localhost:3000/app/customers/new");
+await page.getByLabel("Nimi").fill("Kirvesmies Oy");
+await page.getByLabel("Sähköposti").fill("laskutus@kirvesmies.example");
+await page.getByRole("button", { name: "Lisää asiakas" }).click();
+await page.waitForURL(/\/app\/customers\/[a-z0-9]{20,}$/, { timeout: 10000 });
+
+// 17. Quotes: empty state
+await page.goto("http://localhost:3000/app/quotes");
+check(
+  "quotes page shows empty state initially",
+  await page.getByText("Ei vielä tarjouksia.").isVisible().catch(() => false)
+);
+
+// 18. Quotes: create a quote with two line items
+await page.getByRole("button", { name: "Uusi tarjous" }).click();
+await page.getByLabel("Asiakas").click();
+await page.getByRole("option", { name: "Kirvesmies Oy" }).click();
+await page.getByLabel("Otsikko (valinnainen)").fill("Keittiöremontti");
+
+const descriptionInputs = page.getByPlaceholder("Kuvaus");
+const quantityInputs = page.getByPlaceholder("Määrä");
+const priceInputs = page.getByPlaceholder("À-hinta €");
+await descriptionInputs.nth(0).fill("Asennustyö");
+await quantityInputs.nth(0).fill("3");
+await priceInputs.nth(0).fill("45");
+
+await page.getByRole("button", { name: "Lisää rivi" }).click();
+await descriptionInputs.nth(1).fill("Kaapeli");
+await quantityInputs.nth(1).fill("10");
+await priceInputs.nth(1).fill("2.5");
+
+await page.getByLabel("Alennus %").fill("10");
+await page.getByRole("button", { name: "Luo tarjous" }).click();
+await page.waitForURL(/\/app\/quotes\/[a-z0-9]{20,}$/, { timeout: 10000 });
+
+// Manual expected total: (3*4500 + 10*250) = 16000 subtotal; -10% discount = 1600;
+// after discount 14400; +25% VAT = 3600; total = 18000 cents = 180,00 EUR
+check("new quote redirects to its detail page", true, page.url());
+check("quote detail shows correct total after discount and VAT", await page.getByText("180,00").isVisible());
+
+const quoteUrl = page.url();
+const quoteId = quoteUrl.split("/").pop();
+
+// 19. Quotes: appears in list
+await page.goto("http://localhost:3000/app/quotes");
+check("new quote appears in the list", await page.getByText("Kirvesmies Oy").isVisible());
+
+// 20. Quotes: PDF download returns a real PDF
+const pdfResponse = await page.request.get(`http://localhost:3000/app/quotes/${quoteId}/pdf`);
+const pdfBody = await pdfResponse.body();
+check(
+  "PDF download returns a valid non-empty PDF",
+  pdfResponse.ok() && pdfBody.subarray(0, 5).toString() === "%PDF-" && pdfBody.length > 500,
+  `status=${pdfResponse.status()}, bytes=${pdfBody.length}`
+);
+
+// 21. Quotes: mark sent -> accept
+await page.goto(quoteUrl);
+await page.getByRole("button", { name: "Merkitse lähetetyksi" }).click();
+await page.getByText("Lähetetty").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("quote status updates to Lähetetty after sending", await page.getByText("Lähetetty").isVisible());
+
+await page.getByRole("button", { name: "Merkitse hyväksytyksi" }).click();
+await page.getByText("Hyväksytty").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("quote status updates to Hyväksytty after accepting", await page.getByText("Hyväksytty").isVisible());
+
+// 22. Quotes: editing an ACCEPTED quote is rejected (redirects back to detail, no form)
+await page.goto(`http://localhost:3000/app/quotes/${quoteId}/edit`);
+await page.waitForLoadState("networkidle");
+check(
+  "editing a non-DRAFT quote redirects away instead of showing the form",
+  page.url() === quoteUrl,
+  page.url()
 );
 
 await browser.close();

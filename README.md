@@ -1,15 +1,17 @@
 # Toimi
 
-Finnish-language SaaS platform for tradespeople: an AI business-starter advisor plus (in
-later phases) quoting, scheduling, and invoicing. This repo currently covers **Phase 0
-(foundation)** and **Module 1 (AI Business Starter)** — see
+Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
+management (CRM), and quoting, with scheduling/invoicing/etc. still to come. This repo
+currently covers **Phase 0 (foundation)**, **Module 1 (AI Business Starter)**, **Module 2
+(CRM)**, and **Module 3 (Quotes)** — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
 ## Stack
 
 Next.js 16 (App Router, TypeScript) · Tailwind CSS + shadcn/ui (Base UI primitives) ·
-Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Responses API)
+Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Responses API) ·
+`@react-pdf/renderer` (quote PDFs)
 
 ## Prerequisites
 
@@ -18,6 +20,7 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
   - [Neon](https://neon.tech) free tier (recommended for anything beyond solo local dev), or
   - `npx prisma dev` — Prisma's own local dev Postgres, zero account needed. Prints a
     `DATABASE_URL` to use; keep it running in another terminal (or `-d` to background it).
+    See the connection-pooling note below if using this option.
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 
 ## Setup
@@ -37,7 +40,7 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    | `NEXTAUTH_URL` | auth | `http://localhost:3000` in dev |
    | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google sign-in | Optional — leave blank to disable the Google button |
    | `OPENAI_API_KEY` | AI Starter advisor | Required for `/starter` to work |
-   | `OPENAI_MODEL` | AI Starter advisor | Optional override; defaults to `gpt-5.5-mini` — verify this model is available on your account and adjust if not |
+   | `OPENAI_MODEL` | AI Starter advisor | Optional override; defaults to `gpt-5.4-mini` (verified available as of 2026-07) — check current availability on your account and adjust if needed |
 
 3. Apply the schema to your database:
 
@@ -58,15 +61,25 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    ```
 
    Visit [http://localhost:3000](http://localhost:3000). The landing page, `/signup`,
-   `/login`, and the free `/starter` AI advisor should all work once the env vars above
-   are set.
+   `/login`, the free `/starter` AI advisor, `/app/customers`, and `/app/quotes` should all
+   work once the env vars above are set.
+
+### Local dev database connection pooling
+
+If you're using `npx prisma dev`'s local proxy, `src/lib/db.ts` automatically caps the
+connection pool to 1 (`max: 1`) when `DATABASE_URL` contains `localhost`. That proxy has a
+bug where concurrent pooled connections can hit `DriverAdapterError: bind message supplies
+N parameters, but prepared statement requires M` — a race in the proxy's handling of
+unnamed prepared statements, not in this app's queries or Prisma's adapter. The cap only
+applies to `localhost` URLs; a real hosted Postgres (Neon, etc.) in production is not
+artificially limited.
 
 ## Testing
 
 ```bash
-npm run test        # Vitest — unit tests for the starter state machine, prompt, and schemas
+npm run test        # Vitest — unit tests for state machines, pure calculations, schemas
 npm run test:e2e     # Playwright — full anonymous-chat-to-plan smoke test
-npm run verify       # Browser-driven smoke check of auth/RBAC/starter-session foundation
+npm run verify       # Browser-driven smoke check of auth/RBAC/CRM/Quotes, no OpenAI key needed
 ```
 
 The Playwright test hits the real OpenAI API and a real database (no mocks — that's the
@@ -76,10 +89,11 @@ both configured with real values.
 `npm run verify` (`scripts/verify.mjs`) only needs `DATABASE_URL` — it drives a real
 Chromium browser through the landing page, theme toggle, `/app` RBAC redirect, anonymous
 `/starter` session + cookie persistence, signup → login → dashboard, duplicate-signup
-error handling, and confirms the anonymous starter session gets linked to the new user on
-signup. It intentionally doesn't need `OPENAI_API_KEY` (it accepts that the chat call
-returns a friendly 502 without a key), so it's the fast/cheap way to confirm the
-foundation works before wiring up a real OpenAI key.
+error handling, full customer CRUD (create/list/detail/note/edit/delete), and a full quote
+lifecycle (create with line items → verify computed totals → download and validate the PDF
+→ mark sent → accept → confirm a non-DRAFT quote can't be edited). It intentionally doesn't
+need `OPENAI_API_KEY` (it accepts that the starter chat call returns a friendly 502 without
+a key), so it's the fast/cheap way to confirm everything except the AI itself works.
 
 ## Other useful commands
 
@@ -96,16 +110,21 @@ src/
   app/
     (auth)/login, (auth)/signup   — auth pages (route group, no URL prefix)
     app/                          — authenticated shell (requires sign-in)
+      customers/                  — CRM: list, create, detail (+ notes), edit
+      quotes/                     — Quotes: list, create, detail (+ status actions), edit, PDF route
     starter/                      — free AI Business Starter chat
     api/auth/[...nextauth]        — Auth.js route handler
     api/starter/{chat,plan}       — AI Starter endpoints
   components/
     ui/                           — shadcn/ui primitives
-    starter/                      — AI Starter plan view
+    starter/, customers/, quotes/ — feature-specific components
   lib/
-    auth.ts, rbac.ts, db.ts       — auth config, RBAC guard, Prisma client
+    auth.ts, rbac.ts, db.ts       — auth config, RBAC guards, Prisma client
     starter/                      — knowledge base, state machine, OpenAI wrapper, schemas
-prisma/schema.prisma              — data model (auth, company/RBAC, AI starter — see plan
-                                     doc for why CRM/Quotes/etc. aren't modeled yet)
+    customers/                    — customer form validation
+    quotes/                       — totals calculation, status transitions, schemas, PDF generation
+prisma/schema.prisma              — data model (see plan doc for why Jobs/Invoices/etc.
+                                     aren't modeled yet)
 e2e/                              — Playwright specs
+scripts/verify.mjs                — browser-driven smoke check (see Testing above)
 ```

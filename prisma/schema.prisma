@@ -94,6 +94,7 @@ model Company {
 
   members   CompanyMember[]
   customers Customer[]
+  quotes    Quote[]
 }
 
 model CompanyMember {
@@ -185,6 +186,7 @@ model Customer {
 
   company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   notes   CustomerNote[]
+  quotes  Quote[]
 
   @@index([companyId])
 }
@@ -200,4 +202,56 @@ model CustomerNote {
   author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([customerId, createdAt])
+}
+
+// ---------- Quotes (Module 3) ----------
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+enum QuoteLineItemType {
+  LABOR
+  MATERIAL
+}
+
+model Quote {
+  id                String      @id @default(cuid())
+  companyId         String
+  customerId        String
+  number            Int // sequential per company, shown as "Tarjous #7"
+  status            QuoteStatus @default(DRAFT)
+  title             String?
+  vatRatePercent    Int         @default(25)
+  reverseVatApplies Boolean     @default(false)
+  discountPercent   Int         @default(0)
+  notes             String?     @db.Text
+  sentAt            DateTime?
+  respondedAt       DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  company  Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  items    QuoteLineItem[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+}
+
+model QuoteLineItem {
+  id             String            @id @default(cuid())
+  quoteId        String
+  type           QuoteLineItemType @default(LABOR)
+  description    String
+  quantity       Float             @default(1)
+  unitPriceCents Int
+  position       Int               @default(0)
+
+  quote Quote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+
+  @@index([quoteId, position])
 }
