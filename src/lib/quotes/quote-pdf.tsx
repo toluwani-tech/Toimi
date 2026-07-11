@@ -1,6 +1,6 @@
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
 
-import { calculateQuoteTotals, formatEuros } from "@/lib/quotes/calculations";
+import { calculateLineItemTotals, formatEuros } from "@/lib/money";
 
 export type QuotePdfData = {
   number: number;
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
 });
 
 export function QuotePdfDocument({ quote }: { quote: QuotePdfData }) {
-  const totals = calculateQuoteTotals(
+  const totals = calculateLineItemTotals(
     quote.items.map((item) => ({ quantity: item.quantity, unitPriceCents: item.unitPriceCents })),
     {
       discountPercent: quote.discountPercent,

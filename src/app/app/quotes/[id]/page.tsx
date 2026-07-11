@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteQuoteButton } from "@/components/quotes/delete-quote-button";
-import { calculateQuoteTotals, formatEuros } from "@/lib/quotes/calculations";
+import { calculateLineItemTotals, formatEuros } from "@/lib/money";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/rbac";
 
@@ -45,7 +45,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
 
   const existingJob = quote.status === "ACCEPTED" ? await db.job.findFirst({ where: { quoteId: quote.id } }) : null;
 
-  const totals = calculateQuoteTotals(quote.items, {
+  const totals = calculateLineItemTotals(quote.items, {
     discountPercent: quote.discountPercent,
     vatRatePercent: quote.vatRatePercent,
     reverseVatApplies: quote.reverseVatApplies,

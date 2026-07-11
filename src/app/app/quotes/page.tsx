@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { calculateQuoteTotals, formatEuros } from "@/lib/quotes/calculations";
+import { calculateLineItemTotals, formatEuros } from "@/lib/money";
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/rbac";
 
@@ -55,7 +55,7 @@ export default async function QuotesPage() {
           </TableHeader>
           <TableBody>
             {quotes.map((quote) => {
-              const totals = calculateQuoteTotals(quote.items, {
+              const totals = calculateLineItemTotals(quote.items, {
                 discountPercent: quote.discountPercent,
                 vatRatePercent: quote.vatRatePercent,
                 reverseVatApplies: quote.reverseVatApplies,
