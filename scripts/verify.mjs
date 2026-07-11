@@ -377,6 +377,50 @@ check(
   invoiceCustomerFieldText ?? "(empty)"
 );
 
+// 38. Expenses: empty state
+await page.goto("http://localhost:3000/app/expenses");
+check(
+  "expenses page shows empty state initially",
+  await page.getByText("Ei vielä kuluja.").isVisible().catch(() => false)
+);
+
+// 39. Expenses: create an expense linked to the earlier job
+await page.getByRole("button", { name: "Uusi kulu" }).click();
+await page.getByLabel("Kategoria").click();
+await page.getByRole("option", { name: "Materiaali" }).click();
+await page.getByLabel("Kuvaus").fill("Kaapelit ja liittimet");
+await page.getByLabel("Summa (€)").fill("87.50");
+await page.getByLabel("Päivämäärä").fill("2026-07-01");
+await page.getByLabel("Toimittaja (valinnainen)").fill("K-Rauta");
+await page.getByLabel("Liitetty työ (valinnainen)").click();
+await page.getByRole("option", { name: "Keittiöremontin asennus" }).click();
+await clickAndWaitForUrl(page.getByRole("button", { name: "Lisää kulu" }), /\/app\/expenses$/);
+check("creating an expense redirects to the expense list", true, page.url());
+check("new expense appears in the list", await page.getByText("Kaapelit ja liittimet").isVisible());
+check("expense list shows the correct amount", await page.getByRole("cell", { name: "87,50" }).isVisible());
+const expenseStatsText = await page.locator('[data-slot="card-content"]').first().textContent();
+check("expense stats strip shows the same total for this month", expenseStatsText?.includes("87,50") ?? false);
+check("expense list shows the linked job", await page.getByText("Keittiöremontin asennus").isVisible());
+
+// 40. Expenses: edit it
+await page.getByText("Kaapelit ja liittimet").click();
+await page.waitForURL(/\/app\/expenses\/[a-z0-9]{20,}\/edit$/);
+await page.getByLabel("Kuvaus").fill("Kaapelit, liittimet ja putket");
+await clickAndWaitForUrl(page.getByRole("button", { name: "Tallenna muutokset" }), /\/app\/expenses$/);
+check(
+  "edited expense description is reflected in the list",
+  await page.getByText("Kaapelit, liittimet ja putket").isVisible()
+);
+
+// 41. Expenses: delete it (auto-accept the confirm dialog)
+page.once("dialog", (dialog) => dialog.accept());
+await page.getByRole("button", { name: "Poista" }).click();
+await page.waitForTimeout(800);
+check(
+  "deleted expense no longer appears in the list",
+  !(await page.getByText("Kaapelit, liittimet ja putket").isVisible().catch(() => false))
+);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

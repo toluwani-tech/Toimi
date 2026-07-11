@@ -98,6 +98,7 @@ model Company {
   quotes    Quote[]
   jobs      Job[]
   invoices  Invoice[]
+  expenses  Expense[]
 }
 
 model CompanyMember {
@@ -293,6 +294,7 @@ model Job {
   quote     Quote?        @relation(fields: [quoteId], references: [id], onDelete: SetNull)
   assignees JobAssignee[]
   tasks     JobTask[]
+  expenses  Expense[]
 
   @@index([companyId, startAt])
 }
@@ -386,4 +388,32 @@ model Payment {
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId])
+}
+
+// ---------- Expenses (Module 8) ----------
+
+enum ExpenseCategory {
+  MATERIAL
+  FUEL
+  EQUIPMENT
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  companyId   String
+  jobId       String?
+  category    ExpenseCategory @default(OTHER)
+  description String
+  amountCents Int
+  vendor      String?
+  incurredAt  DateTime
+  notes       String?         @db.Text
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  job     Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, incurredAt])
 }
