@@ -1,9 +1,9 @@
 # Toimi
 
 Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
-management (CRM), quoting, and job/schedule tracking, with invoicing/etc. still to come.
-This repo currently covers **Phase 0 (foundation)**, **Module 1 (AI Business Starter)**,
-**Module 2 (CRM)**, **Module 3 (Quotes)**, and **Module 4/5 (Jobs & Scheduling)** — see
+management (CRM), quoting, job/schedule tracking, and invoicing with payment tracking.
+This repo currently covers **Phase 0 (foundation)** through **Module 6/7 (Invoices &
+Payments)** — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -11,7 +11,7 @@ phased plan and roadmap of the remaining modules.
 
 Next.js 16 (App Router, TypeScript) · Tailwind CSS + shadcn/ui (Base UI primitives) ·
 Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Responses API) ·
-`@react-pdf/renderer` (quote PDFs)
+`@react-pdf/renderer` (quote/invoice PDFs)
 
 ## Prerequisites
 
@@ -62,7 +62,7 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
 
    Visit [http://localhost:3000](http://localhost:3000). The landing page, `/signup`,
    `/login`, the free `/starter` AI advisor, `/app/customers`, `/app/quotes`, `/app/jobs`,
-   and `/app/schedule` should all work once the env vars above are set.
+   `/app/schedule`, and `/app/invoices` should all work once the env vars above are set.
 
 ### Local dev database connection pooling
 
@@ -91,19 +91,30 @@ Chromium browser through the landing page, theme toggle, `/app` RBAC redirect, a
 `/starter` session + cookie persistence, signup → login → dashboard, duplicate-signup
 error handling, full customer CRUD (create/list/detail/note/edit/delete), a full quote
 lifecycle (create with line items → verify computed totals → download and validate the PDF
-→ mark sent → accept → confirm a non-DRAFT quote can't be edited), and a full job
-lifecycle (create with an initial task → appears in the list and on the week schedule →
-toggle a task → walk SCHEDULED → IN_PROGRESS → COMPLETED → confirm a COMPLETED job can't
-be edited → convert an accepted quote into a job and confirm it's pre-filled correctly). It
-intentionally doesn't need `OPENAI_API_KEY` (it accepts that the starter chat call returns
-a friendly 502 without a key), so it's the fast/cheap way to confirm everything except the
-AI itself works.
+→ mark sent → accept → confirm a non-DRAFT quote can't be edited), a full job lifecycle
+(create with an initial task → appears in the list and on the week schedule → toggle a
+task → walk SCHEDULED → IN_PROGRESS → COMPLETED → confirm a COMPLETED job can't be edited
+→ convert an accepted quote into a job), and a full invoice/payment lifecycle (create with
+line items → mark sent → record a partial payment and confirm status stays SENT with the
+correct remaining balance → record a second payment that completes the total and confirm
+status auto-flips to PAID → download and validate the PDF → create an invoice from the
+same accepted quote and confirm it's pre-filled correctly, independent of the job already
+created from it). It intentionally doesn't need `OPENAI_API_KEY` (it accepts that the
+starter chat call returns a friendly 502 without a key), so it's the fast/cheap way to
+confirm everything except the AI itself works.
 
 Note: the dev server occasionally surfaces a one-off `Failed to fetch` on a Server Action
 that actually completes successfully server-side (confirmed via direct DB checks) — a
 Turbopack/dev-server timing quirk, not an app bug. `scripts/verify.mjs`'s
 `clickAndWaitForUrl` helper retries once to absorb this; if you see it fail twice in a row,
 that's worth investigating for real.
+
+If you restart the dev server often during a long session, kill it by PID specifically
+(`taskkill /F /PID <pid>`) rather than `/IM node.exe` (which would also kill the Prisma
+dev database process). On Windows, killing a single PID doesn't cascade to its child
+processes, so orphaned Turbopack/Node workers can accumulate over many restarts and
+eventually cause an out-of-memory crash — if things get sluggish, check `Get-Process node`
+and clean up strays (excluding the Prisma dev DB's PID).
 
 ## Other useful commands
 
@@ -124,20 +135,23 @@ src/
       quotes/                     — Quotes: list, create, detail (+ status actions), edit, PDF route
       jobs/                       — Jobs: list, create, detail (+ status, tasks), edit
       schedule/                   — week-view schedule (plain grid, no calendar library)
+      invoices/                   — Invoices: list (+ stats), create, detail (+ payments), edit, PDF route
     starter/                      — free AI Business Starter chat
     api/auth/[...nextauth]        — Auth.js route handler
     api/starter/{chat,plan}       — AI Starter endpoints
   components/
-    ui/                                    — shadcn/ui primitives
-    starter/, customers/, quotes/, jobs/   — feature-specific components
+    ui/                                              — shadcn/ui primitives
+    starter/, customers/, quotes/, jobs/, invoices/   — feature-specific components
   lib/
     auth.ts, rbac.ts, db.ts       — auth config, RBAC guards, Prisma client
+    money.ts                      — shared line-item totals math (Quotes + Invoices)
     starter/                      — knowledge base, state machine, OpenAI wrapper, schemas
     customers/                    — customer form validation
-    quotes/                       — totals calculation, status transitions, schemas, PDF generation
+    quotes/                       — status transitions, schemas, PDF generation
     jobs/                         — status transitions, schemas
-prisma/schema.prisma              — data model (see plan doc for why Invoices/Expenses/etc.
-                                     aren't modeled yet)
+    invoices/                     — status transitions (incl. derived overdue), schemas, PDF generation
+prisma/schema.prisma              — data model (see plan doc for why Expenses/etc. aren't
+                                     modeled yet)
 e2e/                              — Playwright specs
 scripts/verify.mjs                — browser-driven smoke check (see Testing above)
 ```

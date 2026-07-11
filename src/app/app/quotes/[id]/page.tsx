@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { createInvoiceFromQuote } from "@/app/app/invoices/actions";
 import { convertQuoteToJob } from "@/app/app/jobs/actions";
 import {
   deleteQuote,
@@ -44,6 +45,8 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   if (!quote) notFound();
 
   const existingJob = quote.status === "ACCEPTED" ? await db.job.findFirst({ where: { quoteId: quote.id } }) : null;
+  const existingInvoice =
+    quote.status === "ACCEPTED" ? await db.invoice.findFirst({ where: { quoteId: quote.id } }) : null;
 
   const totals = calculateLineItemTotals(quote.items, {
     discountPercent: quote.discountPercent,
@@ -56,6 +59,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
   const rejectAction = markQuoteRejected.bind(null, quote.id);
   const deleteAction = deleteQuote.bind(null, quote.id);
   const convertAction = convertQuoteToJob.bind(null, quote.id);
+  const invoiceAction = createInvoiceFromQuote.bind(null, quote.id);
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,6 +94,18 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
             ) : (
               <form action={convertAction}>
                 <Button type="submit">Muunna työksi</Button>
+              </form>
+            ))}
+          {quote.status === "ACCEPTED" &&
+            (existingInvoice ? (
+              <Button variant="outline" nativeButton={false} render={<Link href={`/app/invoices/${existingInvoice.id}`} />}>
+                Avaa lasku →
+              </Button>
+            ) : (
+              <form action={invoiceAction}>
+                <Button type="submit" variant="outline">
+                  Luo lasku
+                </Button>
               </form>
             ))}
         </div>

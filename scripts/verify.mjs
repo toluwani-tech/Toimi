@@ -290,6 +290,93 @@ check(
   customerFieldText ?? "(empty)"
 );
 
+// 30. Invoices: empty state
+await page.goto("http://localhost:3000/app/invoices");
+check(
+  "invoices page shows empty state initially",
+  await page.getByText("Ei vielä laskuja.").isVisible().catch(() => false)
+);
+
+// 31. Invoices: create an invoice with two line items
+await page.getByRole("button", { name: "Uusi lasku" }).click();
+await page.getByLabel("Asiakas").click();
+await page.getByRole("option", { name: "Kirvesmies Oy" }).click();
+await page.getByLabel("Otsikko (valinnainen)").fill("Sähkötyöt");
+await page.getByLabel("Eräpäivä (valinnainen)").fill("2026-12-31");
+
+const invDescriptionInputs = page.getByPlaceholder("Kuvaus");
+const invQuantityInputs = page.getByPlaceholder("Määrä");
+const invPriceInputs = page.getByPlaceholder("À-hinta €");
+await invDescriptionInputs.nth(0).fill("Asennustyö");
+await invQuantityInputs.nth(0).fill("3");
+await invPriceInputs.nth(0).fill("45");
+
+await page.getByRole("button", { name: "Lisää rivi" }).click();
+await invDescriptionInputs.nth(1).fill("Kaapeli");
+await invQuantityInputs.nth(1).fill("10");
+await invPriceInputs.nth(1).fill("2.5");
+
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo lasku" }), /\/app\/invoices\/[a-z0-9]{20,}$/);
+
+// Manual expected total: (3*4500 + 10*250) = 16000 subtotal; no discount;
+// +25% VAT = 4000; total = 20000 cents = 200,00 EUR
+check("new invoice redirects to its detail page", true, page.url());
+check("invoice detail shows correct total", await page.getByText("200,00").isVisible());
+
+const invoiceUrl = page.url();
+
+// 32. Invoices: appears in list
+await page.goto("http://localhost:3000/app/invoices");
+check("new invoice appears in the list", await page.getByText("Kirvesmies Oy").isVisible());
+
+// 33. Invoices: mark sent
+await page.goto(invoiceUrl);
+await page.getByRole("button", { name: "Merkitse lähetetyksi" }).click();
+await page.getByText("Lähetetty").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("invoice status updates to Lähetetty after sending", await page.getByText("Lähetetty").isVisible());
+
+// 34. Invoices: record a partial payment — status should stay SENT
+await page.getByLabel("Summa (€)").fill("100");
+await page.getByRole("button", { name: "Kirjaa maksu" }).click();
+await page.getByText("Jäljellä").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+const partialPaymentText = await page.textContent("body");
+check(
+  "partial payment keeps status Lähetetty and shows remaining balance",
+  partialPaymentText.includes("Lähetetty") && partialPaymentText.includes("100,00"),
+  "checked for Lähetetty + 100,00 remaining"
+);
+
+// 35. Invoices: record a second payment completing the total — status should flip to Maksettu
+await page.getByLabel("Summa (€)").fill("100");
+await page.getByRole("button", { name: "Kirjaa maksu" }).click();
+await page.getByText("Maksettu").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+check("invoice status auto-flips to Maksettu once fully paid", await page.getByText("Maksettu").isVisible());
+
+// 36. Invoices: PDF download returns a real PDF
+const invoiceId = invoiceUrl.split("/").pop();
+const invoicePdfResponse = await page.request.get(`http://localhost:3000/app/invoices/${invoiceId}/pdf`);
+const invoicePdfBody = await invoicePdfResponse.body();
+check(
+  "invoice PDF download returns a valid non-empty PDF",
+  invoicePdfResponse.ok() &&
+    invoicePdfBody.subarray(0, 5).toString() === "%PDF-" &&
+    invoicePdfBody.length > 500,
+  `status=${invoicePdfResponse.status()}, bytes=${invoicePdfBody.length}`
+);
+
+// 37. Invoices: create an invoice from the already-accepted quote (independent of the
+// job conversion done earlier on the same quote)
+await page.goto(quoteUrl);
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo lasku" }), /\/app\/invoices\/[a-z0-9]{20,}\/edit$/);
+await page.waitForLoadState("networkidle");
+check("creating an invoice from an accepted quote redirects to its edit page", true, page.url());
+const invoiceCustomerFieldText = await page.getByLabel("Asiakas").textContent();
+check(
+  "invoice created from a quote is pre-filled with the quote's customer",
+  invoiceCustomerFieldText?.includes("Kirvesmies Oy") ?? false,
+  invoiceCustomerFieldText ?? "(empty)"
+);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

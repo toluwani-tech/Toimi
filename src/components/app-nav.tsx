@@ -11,6 +11,7 @@ const links = [
   { href: "/app/quotes", label: "Tarjoukset" },
   { href: "/app/jobs", label: "Työt" },
   { href: "/app/schedule", label: "Aikataulu" },
+  { href: "/app/invoices", label: "Laskut" },
 ];
 
 export function AppNav() {

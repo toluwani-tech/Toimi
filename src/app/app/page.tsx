@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompany } from "@/lib/rbac";
 
-const upcomingModules = ["Laskutus", "Kulut", "Raportit"];
+const upcomingModules = ["Kulut", "Raportit"];
 
 export default async function AppDashboardPage() {
   const { user, membership } = await requireCompany();
@@ -65,12 +65,26 @@ export default async function AppDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>
+            <h2>Laskut</h2>
+          </CardTitle>
+          <CardDescription>Luo laskuja, kirjaa maksuja ja seuraa avoimia saatavia.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/app/invoices" className="text-sm underline underline-offset-4">
+            Avaa laskut →
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
             <h2>Seuraavaksi rakennettavat moduulit</h2>
           </CardTitle>
           <CardDescription>
             Nämä ominaisuudet tulevat myöhemmissä vaiheissa. Toistaiseksi ilmainen
-            AI-neuvonantaja, asiakkuudenhallinta, tarjoukset ja työt/aikataulu ovat
-            käytettävissä.
+            AI-neuvonantaja, asiakkuudenhallinta, tarjoukset, työt/aikataulu ja laskutus
+            ovat käytettävissä.
           </CardDescription>
         </CardHeader>
         <CardContent>

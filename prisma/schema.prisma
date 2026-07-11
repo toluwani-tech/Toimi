@@ -97,6 +97,7 @@ model Company {
   customers Customer[]
   quotes    Quote[]
   jobs      Job[]
+  invoices  Invoice[]
 }
 
 model CompanyMember {
@@ -186,10 +187,11 @@ model Customer {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  company Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  notes   CustomerNote[]
-  quotes  Quote[]
-  jobs    Job[]
+  company  Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  notes    CustomerNote[]
+  quotes   Quote[]
+  jobs     Job[]
+  invoices Invoice[]
 
   @@index([companyId])
 }
@@ -241,6 +243,7 @@ model Quote {
   customer Customer        @relation(fields: [customerId], references: [id], onDelete: Restrict)
   items    QuoteLineItem[]
   jobs     Job[]
+  invoices Invoice[]
 
   @@unique([companyId, number])
   @@index([companyId])
@@ -315,4 +318,72 @@ model JobTask {
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId, position])
+}
+
+// ---------- Invoices & Payments (Module 6/7) ----------
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  CANCELLED
+}
+
+enum InvoiceLineItemType {
+  LABOR
+  MATERIAL
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  companyId         String
+  customerId        String
+  quoteId           String?
+  number            Int
+  status            InvoiceStatus @default(DRAFT)
+  title             String?
+  vatRatePercent    Int           @default(25)
+  reverseVatApplies Boolean       @default(false)
+  discountPercent   Int           @default(0)
+  dueDate           DateTime?
+  notes             String?       @db.Text
+  sentAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quote    Quote?            @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  items    InvoiceLineItem[]
+  payments Payment[]
+
+  @@unique([companyId, number])
+  @@index([companyId])
+}
+
+model InvoiceLineItem {
+  id             String              @id @default(cuid())
+  invoiceId      String
+  type           InvoiceLineItemType @default(LABOR)
+  description    String
+  quantity       Float               @default(1)
+  unitPriceCents Int
+  position       Int                 @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, position])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  amountCents Int
+  paidAt      DateTime @default(now())
+  method      String? // free text: "Tilisiirto", "Käteinen", ...
+  createdAt   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
