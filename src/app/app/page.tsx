@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompany } from "@/lib/rbac";
 
-const upcomingModules = ["AI Copilot", "Dokumenttien tallennus", "Ilmoitukset", "Ylläpitäjän hallintapaneeli"];
+const upcomingModules = ["Dokumenttien tallennus", "Ilmoitukset", "Ylläpitäjän hallintapaneeli"];
 
 export default async function AppDashboardPage() {
   const { user, membership } = await requireCompany();
@@ -107,12 +107,26 @@ export default async function AppDashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>
+            <h2>AI-copilot</h2>
+          </CardTitle>
+          <CardDescription>Kysy yrityksesi tiedoista ja saa toimialaneuvontaa.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/app/copilot" className="text-sm underline underline-offset-4">
+            Avaa copilot →
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
             <h2>Seuraavaksi rakennettavat moduulit</h2>
           </CardTitle>
           <CardDescription>
             Nämä ominaisuudet tulevat myöhemmissä vaiheissa. Toistaiseksi ilmainen
-            AI-neuvonantaja, asiakkuudenhallinta, tarjoukset, työt/aikataulu, laskutus, kulut
-            ja raportit ovat käytettävissä.
+            AI-neuvonantaja, asiakkuudenhallinta, tarjoukset, työt/aikataulu, laskutus, kulut,
+            raportit ja AI-copilot ovat käytettävissä.
           </CardDescription>
         </CardHeader>
         <CardContent>

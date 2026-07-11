@@ -14,6 +14,7 @@ const links = [
   { href: "/app/invoices", label: "Laskut" },
   { href: "/app/expenses", label: "Kulut" },
   { href: "/app/reports", label: "Raportit" },
+  { href: "/app/copilot", label: "Copilot" },
 ];
 
 export function AppNav() {

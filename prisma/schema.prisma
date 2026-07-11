@@ -24,12 +24,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts       Account[]
-  sessions       Session[]
-  companyMembers CompanyMember[]
-  aiChatSessions AIChatSession[]
-  customerNotes  CustomerNote[]
-  jobAssignments JobAssignee[]
+  accounts        Account[]
+  sessions        Session[]
+  companyMembers  CompanyMember[]
+  aiChatSessions  AIChatSession[]
+  customerNotes   CustomerNote[]
+  jobAssignments  JobAssignee[]
+  copilotMessages CopilotMessage[]
 }
 
 model Account {
@@ -93,12 +94,13 @@ model Company {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  members   CompanyMember[]
-  customers Customer[]
-  quotes    Quote[]
-  jobs      Job[]
-  invoices  Invoice[]
-  expenses  Expense[]
+  members         CompanyMember[]
+  customers       Customer[]
+  quotes          Quote[]
+  jobs            Job[]
+  invoices        Invoice[]
+  expenses        Expense[]
+  copilotMessages CopilotMessage[]
 }
 
 model CompanyMember {
@@ -416,4 +418,20 @@ model Expense {
   job     Job?    @relation(fields: [jobId], references: [id], onDelete: SetNull)
 
   @@index([companyId, incurredAt])
+}
+
+// ---------- AI Copilot (Module 10) ----------
+
+model CopilotMessage {
+  id        String             @id @default(cuid())
+  companyId String
+  userId    String
+  role      StarterMessageRole
+  content   String             @db.Text
+  createdAt DateTime           @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, userId, createdAt])
 }

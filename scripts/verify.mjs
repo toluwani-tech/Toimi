@@ -466,6 +466,37 @@ check("job profitability shows the expected profit", await page.getByRole("cell"
 
 check("monthly profit stat shows the expected figure", await page.getByText("170,00").isVisible());
 
+// 44. Copilot: page loads, sending a message doesn't crash the app either way (real
+// reply or the friendly 502 fallback — same no-OpenAI-key-required pattern as /starter)
+await page.goto("http://localhost:3000/app/copilot");
+check("copilot page loads", await page.getByRole("heading", { name: "AI-copilot" }).isVisible());
+
+const [copilotResponse] = await Promise.all([
+  page.waitForResponse((r) => r.url().includes("/api/copilot/chat") && r.request().method() === "POST"),
+  page.getByPlaceholder("Kirjoita viestisi…").fill("Mitkä laskut ovat myöhässä?").then(() =>
+    page.getByRole("button", { name: "Lähetä" }).click()
+  ),
+]);
+console.log(`  (debug) POST /api/copilot/chat -> ${copilotResponse.status()}`);
+check(
+  "copilot chat endpoint responds without a server crash",
+  copilotResponse.status() === 200 || copilotResponse.status() === 502
+);
+await page.waitForTimeout(500);
+const copilotBodyText = await page.textContent("body");
+check(
+  "copilot shows either a real reply or the friendly unavailable message",
+  copilotResponse.status() === 200
+    ? (await page.getByTestId("copilot-message").count()) >= 2
+    : copilotBodyText.includes("AI-copilot ei ole juuri nyt käytettävissä")
+);
+
+// 45. Copilot: message history persists across reload
+await page.goto("http://localhost:3000/app/copilot");
+await page.waitForTimeout(500);
+const copilotMessageCount = await page.getByTestId("copilot-message").count();
+check("copilot messages persist across reload", copilotMessageCount >= 1, `count=${copilotMessageCount}`);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);
