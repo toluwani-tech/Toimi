@@ -15,14 +15,15 @@ datasource db {
 // ---------- Auth ----------
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  passwordHash  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerified   DateTime?
+  name            String?
+  image           String?
+  passwordHash    String?
+  isPlatformAdmin Boolean   @default(false) // operates the Toimi platform itself, not tenant-scoped — see plan doc
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   accounts        Account[]
   sessions        Session[]

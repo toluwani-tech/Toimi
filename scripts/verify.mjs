@@ -1,4 +1,6 @@
+import "dotenv/config";
 import { chromium } from "@playwright/test";
+import { Client } from "pg";
 
 const browser = await chromium.launch();
 const page = await browser.newPage();
@@ -559,6 +561,25 @@ check(
     creditNotePdfBody.length > 500,
   `status=${creditNotePdfResponse.status()}, bytes=${creditNotePdfBody.length}`
 );
+
+// 50. Admin Dashboard: a regular (non-admin) user is redirected away from /admin
+await page.goto("http://localhost:3000/admin");
+check("non-admin user is redirected away from /admin", page.url().endsWith("/app"), page.url());
+
+// 51. Flip isPlatformAdmin directly via SQL — the only way to reach it, by design (no
+// self-service path). Reuses the pg driver already a project dependency.
+const pgClient = new Client({ connectionString: process.env.DATABASE_URL });
+await pgClient.connect();
+await pgClient.query('UPDATE "User" SET "isPlatformAdmin" = true WHERE email = $1', [email]);
+await pgClient.end();
+
+await page.goto("http://localhost:3000/admin");
+check("platform admin can load /admin", await page.getByRole("heading", { name: "Ylläpito" }).isVisible());
+check(
+  "admin dashboard companies table includes the test company",
+  await page.getByText("Testi Testaajan yritys").first().isVisible()
+);
+check("admin dashboard users table includes the test user", await page.getByText(email).isVisible());
 
 await browser.close();
 

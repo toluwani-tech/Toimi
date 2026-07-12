@@ -2,10 +2,10 @@
 
 Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
 management (CRM), quoting, job/schedule tracking, invoicing with payment tracking (incl.
-credit notes and estimated late-fee interest), expense tracking, business reports, and an
-in-app AI copilot.
-This repo currently covers **Phase 0 (foundation)** through **Module 10 (AI Copilot)**,
-plus a credit-notes/late-fee-interest follow-up to Invoices — see
+credit notes and estimated late-fee interest), expense tracking, business reports, an
+in-app AI copilot, and a platform-wide admin dashboard.
+This repo currently covers **Phase 0 (foundation)** through **Module 13 (Admin
+Dashboard)**, plus a credit-notes/late-fee-interest follow-up to Invoices — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -71,6 +71,19 @@ Prisma 7 + PostgreSQL (Neon) · Auth.js v4 (credentials + Google) · OpenAI (Res
    `/app/schedule`, `/app/invoices`, `/app/expenses`, `/app/reports`, and `/app/copilot`
    should all work once the env vars above are set.
 
+### Platform admin access
+
+`/admin` (companies, users, and platform-wide stats across every tenant) has no
+self-service way to reach it — it's gated by `User.isPlatformAdmin`, which is `false` for
+everyone by default and isn't exposed anywhere in the UI. To make an account a platform
+admin, run this once against your database after signing up:
+
+```bash
+npx prisma studio
+# or: npx prisma db execute --stdin, then:
+# UPDATE "User" SET "isPlatformAdmin" = true WHERE email = 'you@example.com';
+```
+
 ### Local dev database connection pooling
 
 If you're using `npx prisma dev`'s local proxy, `src/lib/db.ts` automatically caps the
@@ -116,7 +129,10 @@ the call succeeds or falls back to the friendly 502 → confirm message history 
 across a reload), and a credit-notes/late-fee check (create an overdue, unpaid invoice →
 confirm the overdue badge and an estimated late-fee interest line both appear → create a
 credit note against it → confirm the balance due drops by exactly the credited amount and
-its PDF downloads validly). It intentionally doesn't need `OPENAI_API_KEY` for the
+its PDF downloads validly), and an admin dashboard check (confirm `/admin` redirects a
+regular user → flip `isPlatformAdmin` for the test user directly via SQL, the only way to
+reach it → confirm `/admin` now loads and shows the test company and test user). It
+intentionally doesn't need `OPENAI_API_KEY` for the
 starter/copilot checks to pass (both accept a friendly 502 without a key), so it's the
 fast/cheap way to confirm everything except the AI itself works — though when a real key
 is configured (as in this repo's `.env`), the copilot check exercises a real OpenAI
@@ -159,6 +175,7 @@ src/
       expenses/                   — Expenses: list (+ stats), create, edit, inline delete
       reports/                     — Reports: monthly revenue/expenses, category breakdown, top customers, job profitability
       copilot/                     — AI Copilot chat page
+    admin/                       — platform-wide dashboard: companies, users, stats (gated by isPlatformAdmin)
     starter/                      — free AI Business Starter chat
     api/auth/[...nextauth]        — Auth.js route handler
     api/starter/{chat,plan}       — AI Starter endpoints

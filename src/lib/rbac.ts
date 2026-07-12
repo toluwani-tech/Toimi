@@ -59,3 +59,18 @@ export async function requireCompany() {
   if (!membership) redirect("/app");
   return { user, membership, company: membership.company };
 }
+
+/** Guards the platform-wide /admin area. isPlatformAdmin is not tenant-scoped (unlike
+ * CompanyRole.SUPER_ADMIN, which is a role within one company's membership) and there's
+ * no self-service way to grant it — it's set by hand. Checked fresh from the database
+ * every time, same as every other RBAC guard here, since the session JWT only ever
+ * carries user.id (see src/lib/auth.ts). */
+export async function requirePlatformAdmin() {
+  const user = await requireUser();
+  const fullUser = await db.user.findUnique({
+    where: { id: user.id },
+    select: { isPlatformAdmin: true },
+  });
+  if (!fullUser?.isPlatformAdmin) redirect("/app");
+  return { user };
+}
