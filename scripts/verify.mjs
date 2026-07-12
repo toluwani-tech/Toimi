@@ -497,6 +497,69 @@ await page.waitForTimeout(500);
 const copilotMessageCount = await page.getByTestId("copilot-message").count();
 check("copilot messages persist across reload", copilotMessageCount >= 1, `count=${copilotMessageCount}`);
 
+// 46. Credit notes & late-fee interest: create an overdue invoice (due date well in the
+// past, marked SENT, never paid) to exercise both the overdue/late-fee display and credit
+// notes against the same invoice.
+await page.goto("http://localhost:3000/app/invoices/new");
+await page.getByLabel("Asiakas").click();
+await page.getByRole("option", { name: "Kirvesmies Oy" }).click();
+await page.getByLabel("Otsikko (valinnainen)").fill("Konsultointi");
+await page.getByLabel("Eräpäivä (valinnainen)").fill("2026-01-01");
+await page.getByPlaceholder("Kuvaus").fill("Konsultointityö");
+await page.getByPlaceholder("Määrä").fill("1");
+await page.getByPlaceholder("À-hinta €").fill("500");
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo lasku" }), /\/app\/invoices\/[a-z0-9]{20,}$/);
+check("overdue-test invoice redirects to its detail page", true, page.url());
+check("overdue-test invoice shows correct total (500 + 25% VAT)", await page.getByText("625,00").isVisible());
+
+const overdueInvoiceUrl = page.url();
+await page.getByRole("button", { name: "Merkitse lähetetyksi" }).click();
+await page.getByText("Lähetetty").waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+
+// 47. Overdue badge and late-fee estimate both appear (presence only — the exact figure
+// is time-dependent, so it isn't hardcoded)
+check("overdue invoice shows the Myöhässä badge", await page.getByText("Myöhässä").isVisible());
+check(
+  "overdue invoice shows an estimated late-fee interest line",
+  await page.getByText("Arvioitu viivästyskorko").isVisible()
+);
+
+// 48. Create a credit note against it and confirm the balance due drops by exactly the
+// credited amount (100,00: 80,00 pretax + 25% VAT)
+const overdueInvoiceUrlExact = new RegExp(`^${overdueInvoiceUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
+await clickAndWaitForUrl(
+  page.getByRole("button", { name: "Luo hyvityslasku" }),
+  /\/app\/invoices\/[a-z0-9]{20,}\/credit-notes\/new$/
+);
+await page.getByLabel("Syy (valinnainen)").fill("Virheellinen veloitus");
+await page.getByPlaceholder("Kuvaus").fill("Hyvitys: virheellinen veloitus");
+await page.getByPlaceholder("Määrä").fill("1");
+await page.getByPlaceholder("À-hinta €").fill("80");
+await clickAndWaitForUrl(page.getByRole("button", { name: "Luo hyvityslasku" }), overdueInvoiceUrlExact);
+check("creating a credit note redirects back to the invoice detail page", true, page.url());
+const creditNoteRow = page.locator("li").filter({ hasText: /Hyvityslasku #\d+/ });
+check("credit note appears in the Hyvityslaskut list", await creditNoteRow.isVisible());
+check(
+  "credit note shows the correct total",
+  (await creditNoteRow.textContent())?.includes("100,00") ?? false
+);
+check(
+  "invoice balance due drops by the credited amount (625,00 - 100,00 = 525,00)",
+  await page.getByText("525,00").isVisible()
+);
+
+// 49. Credit note PDF downloads validly
+const creditNotePdfHref = await creditNoteRow.locator("a").getAttribute("href");
+const creditNotePdfResponse = await page.request.get(`http://localhost:3000${creditNotePdfHref}`);
+const creditNotePdfBody = await creditNotePdfResponse.body();
+check(
+  "credit note PDF download returns a valid non-empty PDF",
+  creditNotePdfResponse.ok() &&
+    creditNotePdfBody.subarray(0, 5).toString() === "%PDF-" &&
+    creditNotePdfBody.length > 500,
+  `status=${creditNotePdfResponse.status()}, bytes=${creditNotePdfBody.length}`
+);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

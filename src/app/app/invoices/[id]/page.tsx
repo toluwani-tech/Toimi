@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DeleteInvoiceButton } from "@/components/invoices/delete-invoice-button";
 import { RecordPaymentForm } from "@/components/invoices/record-payment-form";
+import { calculateLateFeeInterest } from "@/lib/invoices/interest";
 import { isInvoiceOverdue } from "@/lib/invoices/status";
 import { calculateLineItemTotals, formatEuros } from "@/lib/money";
 import { db } from "@/lib/db";
@@ -44,6 +45,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       customer: true,
       items: { orderBy: { position: "asc" } },
       payments: { orderBy: { paidAt: "desc" } },
+      creditNotes: { include: { items: true }, orderBy: { number: "asc" } },
     },
   });
   if (!invoice) notFound();
@@ -54,8 +56,27 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     reverseVatApplies: invoice.reverseVatApplies,
   });
   const paidCents = invoice.payments.reduce((sum, p) => sum + p.amountCents, 0);
-  const balanceDueCents = Math.max(totals.totalCents - paidCents, 0);
-  const overdue = isInvoiceOverdue(invoice, paidCents, totals.totalCents);
+
+  const creditNoteTotals = invoice.creditNotes.map((creditNote) => ({
+    creditNote,
+    totalCents: calculateLineItemTotals(creditNote.items, {
+      discountPercent: 0,
+      vatRatePercent: invoice.vatRatePercent,
+      reverseVatApplies: invoice.reverseVatApplies,
+    }).totalCents,
+  }));
+  const creditedCents = creditNoteTotals.reduce((sum, c) => sum + c.totalCents, 0);
+  const effectiveTotalCents = Math.max(totals.totalCents - creditedCents, 0);
+
+  const now = new Date();
+  const balanceDueCents = Math.max(effectiveTotalCents - paidCents, 0);
+  const overdue = isInvoiceOverdue(invoice, paidCents, effectiveTotalCents, now);
+  const daysOverdue = invoice.dueDate
+    ? Math.floor((now.getTime() - invoice.dueDate.getTime()) / (24 * 60 * 60 * 1000))
+    : 0;
+  const lateFeeCents = invoice.dueDate ? calculateLateFeeInterest(balanceDueCents, invoice.dueDate, now) : 0;
+
+  const canCreateCreditNote = invoice.status === "SENT" || invoice.status === "PAID";
 
   const sendAction = markInvoiceSent.bind(null, invoice.id);
   const cancelAction = markInvoiceCancelled.bind(null, invoice.id);
@@ -150,19 +171,38 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               <span>Yhteensä</span>
               <span>{formatEuros(totals.totalCents)}</span>
             </div>
-            {paidCents > 0 && (
+            {creditedCents > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Hyvitetty</span>
+                <span>-{formatEuros(creditedCents)}</span>
+              </div>
+            )}
+            {(paidCents > 0 || creditedCents > 0) && (
               <>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Maksettu</span>
-                  <span>-{formatEuros(paidCents)}</span>
-                </div>
+                {paidCents > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Maksettu</span>
+                    <span>-{formatEuros(paidCents)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between border-t pt-1 font-semibold">
                   <span>Jäljellä</span>
                   <span>{formatEuros(balanceDueCents)}</span>
                 </div>
               </>
             )}
+            {overdue && lateFeeCents > 0 && (
+              <div className="flex justify-between text-destructive">
+                <span>Arvioitu viivästyskorko ({daysOverdue} pv)</span>
+                <span>{formatEuros(lateFeeCents)}</span>
+              </div>
+            )}
           </div>
+          {overdue && lateFeeCents > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Arvio oletuskorolla, ei sisälly laskun summaan eikä PDF:ään — ei virallinen viivästyskorkolaskelma.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -189,6 +229,50 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             </ul>
           )}
           {invoice.status === "SENT" && <RecordPaymentForm invoiceId={invoice.id} />}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Hyvityslaskut</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {creditNoteTotals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ei vielä hyvityslaskuja.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {creditNoteTotals.map(({ creditNote, totalCents }) => (
+                <li key={creditNote.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+                  <span>
+                    Hyvityslasku #{creditNote.number}
+                    {creditNote.reason ? ` · ${creditNote.reason}` : ""}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className="font-medium">{formatEuros(totalCents)}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      nativeButton={false}
+                      render={<Link href={`/app/invoices/credit-notes/${creditNote.id}/pdf`} />}
+                    >
+                      Lataa PDF
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canCreateCreditNote && (
+            <Button
+              variant="outline"
+              nativeButton={false}
+              render={<Link href={`/app/invoices/${invoice.id}/credit-notes/new`} />}
+            >
+              Luo hyvityslasku
+            </Button>
+          )}
         </CardContent>
       </Card>
 

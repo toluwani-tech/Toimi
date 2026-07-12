@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { invoiceFormSchema, paymentFormSchema } from "./schemas";
+import { creditNoteFormSchema, invoiceFormSchema, paymentFormSchema } from "./schemas";
 
 const validItem = { type: "LABOR" as const, description: "Asennustyö", quantity: 2, unitPriceCents: 5000 };
 
@@ -76,6 +76,32 @@ describe("paymentFormSchema", () => {
 
   it("requires a paid date", () => {
     const result = paymentFormSchema.safeParse({ amountCents: 5000, paidAt: "" });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("creditNoteFormSchema", () => {
+  it("accepts a minimal valid credit note", () => {
+    const result = creditNoteFormSchema.safeParse({ items: [validItem] });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an optional reason", () => {
+    const result = creditNoteFormSchema.safeParse({
+      reason: "Virheellinen veloitus",
+      items: [validItem],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("treats an empty reason as absent, not invalid", () => {
+    const result = creditNoteFormSchema.safeParse({ reason: "", items: [validItem] });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.reason).toBeUndefined();
+  });
+
+  it("requires at least one line item", () => {
+    const result = creditNoteFormSchema.safeParse({ items: [] });
     expect(result.success).toBe(false);
   });
 });

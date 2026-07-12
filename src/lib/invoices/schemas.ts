@@ -28,3 +28,9 @@ export const paymentFormSchema = z.object({
   method: z.preprocess(optionalTrim, z.string().trim().optional()),
 });
 export type PaymentFormInput = z.infer<typeof paymentFormSchema>;
+
+export const creditNoteFormSchema = z.object({
+  reason: z.preprocess(optionalTrim, z.string().trim().optional()),
+  items: z.array(invoiceLineItemInputSchema).min(1, "Lisää vähintään yksi rivi."),
+});
+export type CreditNoteFormInput = z.infer<typeof creditNoteFormSchema>;

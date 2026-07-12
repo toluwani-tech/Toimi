@@ -1,10 +1,11 @@
 # Toimi
 
 Finnish-language SaaS platform for tradespeople: an AI business-starter advisor, customer
-management (CRM), quoting, job/schedule tracking, invoicing with payment tracking, expense
-tracking, business reports, and an in-app AI copilot.
-This repo currently covers **Phase 0 (foundation)** through **Module 10 (AI Copilot)** —
-see
+management (CRM), quoting, job/schedule tracking, invoicing with payment tracking (incl.
+credit notes and estimated late-fee interest), expense tracking, business reports, and an
+in-app AI copilot.
+This repo currently covers **Phase 0 (foundation)** through **Module 10 (AI Copilot)**,
+plus a credit-notes/late-fee-interest follow-up to Invoices — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -109,14 +110,17 @@ created from it), a full expense lifecycle (create an expense linked to an exist
 confirm it appears in the list and in the "this month" stats total → edit its description
 → delete it), a reports check (create one more persisted expense linked to the
 quote-converted job → confirm the expense-category breakdown, top-customers table, and
-job-profitability figures on `/app/reports` match hand-computed expected values), and a
+job-profitability figures on `/app/reports` match hand-computed expected values), a
 copilot check (send a message on `/app/copilot` and confirm the app doesn't crash whether
 the call succeeds or falls back to the friendly 502 → confirm message history persists
-across a reload). It intentionally doesn't need `OPENAI_API_KEY` for the starter/copilot
-checks to pass (both accept a friendly 502 without a key), so it's the fast/cheap way to
-confirm everything except the AI itself works — though when a real key is configured (as
-in this repo's `.env`), the copilot check exercises a real OpenAI round-trip grounded in
-the actual seeded data.
+across a reload), and a credit-notes/late-fee check (create an overdue, unpaid invoice →
+confirm the overdue badge and an estimated late-fee interest line both appear → create a
+credit note against it → confirm the balance due drops by exactly the credited amount and
+its PDF downloads validly). It intentionally doesn't need `OPENAI_API_KEY` for the
+starter/copilot checks to pass (both accept a friendly 502 without a key), so it's the
+fast/cheap way to confirm everything except the AI itself works — though when a real key
+is configured (as in this repo's `.env`), the copilot check exercises a real OpenAI
+round-trip grounded in the actual seeded data.
 
 Note: the dev server occasionally surfaces a one-off `Failed to fetch` on a Server Action
 that actually completes successfully server-side (confirmed via direct DB checks) — a
@@ -151,6 +155,7 @@ src/
       jobs/                       — Jobs: list, create, detail (+ status, tasks), edit
       schedule/                   — week-view schedule (plain grid, no calendar library)
       invoices/                   — Invoices: list (+ stats), create, detail (+ payments), edit, PDF route
+        credit-notes/, [id]/credit-notes/  — credit note actions/PDF route + creation page
       expenses/                   — Expenses: list (+ stats), create, edit, inline delete
       reports/                     — Reports: monthly revenue/expenses, category breakdown, top customers, job profitability
       copilot/                     — AI Copilot chat page
@@ -168,7 +173,8 @@ src/
     customers/                    — customer form validation
     quotes/                       — status transitions, schemas, PDF generation
     jobs/                         — status transitions, schemas
-    invoices/                     — status transitions (incl. derived overdue), schemas, PDF generation
+    invoices/                     — status transitions (incl. derived overdue), schemas, PDF generation,
+                                     credit-note PDF generation, late-fee interest estimate
     expenses/                     — schema (no status workflow — see plan doc for why)
     reports/                     — pure aggregation functions (monthly buckets, category sums)
     copilot/                     — business-data snapshot, system prompt, OpenAI wrapper

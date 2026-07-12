@@ -101,6 +101,7 @@ model Company {
   invoices        Invoice[]
   expenses        Expense[]
   copilotMessages CopilotMessage[]
+  creditNotes     CreditNote[]
 }
 
 model CompanyMember {
@@ -355,11 +356,12 @@ model Invoice {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  company  Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  customer Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  quote    Quote?            @relation(fields: [quoteId], references: [id], onDelete: SetNull)
-  items    InvoiceLineItem[]
-  payments Payment[]
+  company     Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer    Customer          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quote       Quote?            @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  items       InvoiceLineItem[]
+  payments    Payment[]
+  creditNotes CreditNote[]
 
   @@unique([companyId, number])
   @@index([companyId])
@@ -377,6 +379,36 @@ model InvoiceLineItem {
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@index([invoiceId, position])
+}
+
+model CreditNote {
+  id        String   @id @default(cuid())
+  companyId String
+  invoiceId String
+  number    Int // sequential per company, shown as "Hyvityslasku #N"
+  reason    String?  @db.Text
+  createdAt DateTime @default(now())
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoice Invoice              @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  items   CreditNoteLineItem[]
+
+  @@unique([companyId, number])
+  @@index([invoiceId])
+}
+
+model CreditNoteLineItem {
+  id             String              @id @default(cuid())
+  creditNoteId   String
+  type           InvoiceLineItemType @default(LABOR)
+  description    String
+  quantity       Float               @default(1)
+  unitPriceCents Int
+  position       Int                 @default(0)
+
+  creditNote CreditNote @relation(fields: [creditNoteId], references: [id], onDelete: Cascade)
+
+  @@index([creditNoteId, position])
 }
 
 model Payment {
