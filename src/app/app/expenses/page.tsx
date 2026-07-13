@@ -30,9 +30,14 @@ export default async function ExpensesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Kulut</h1>
-        <Button nativeButton={false} render={<Link href="/app/expenses/new" />}>
-          Uusi kulu
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/app/expenses/export" />}>
+            Vie CSV
+          </Button>
+          <Button nativeButton={false} render={<Link href="/app/expenses/new" />}>
+            Uusi kulu
+          </Button>
+        </div>
       </div>
 
       <Card className="max-w-xs">

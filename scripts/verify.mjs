@@ -581,6 +581,41 @@ check(
 );
 check("admin dashboard users table includes the test user", await page.getByText(email).isVisible());
 
+// 52. Expenses CSV export
+const expensesCsvResponse = await page.request.get("http://localhost:3000/app/expenses/export");
+const expensesCsvBody = await expensesCsvResponse.text();
+check(
+  "expenses CSV export returns text/csv with the persisted test expense",
+  expensesCsvResponse.ok() &&
+    (expensesCsvResponse.headers()["content-type"] ?? "").includes("text/csv") &&
+    expensesCsvBody.includes("Poravasara vuokraus"),
+  `status=${expensesCsvResponse.status()}, content-type=${expensesCsvResponse.headers()["content-type"]}`
+);
+
+// 53. Invoices CSV export
+const invoicesCsvResponse = await page.request.get("http://localhost:3000/app/invoices/export");
+const invoicesCsvBody = await invoicesCsvResponse.text();
+check(
+  "invoices CSV export returns text/csv with the overdue-test invoice's total",
+  invoicesCsvResponse.ok() &&
+    (invoicesCsvResponse.headers()["content-type"] ?? "").includes("text/csv") &&
+    invoicesCsvBody.includes("625.00"),
+  `status=${invoicesCsvResponse.status()}, content-type=${invoicesCsvResponse.headers()["content-type"]}`
+);
+
+// 54. Reports date-range picker: ?months=12 renders 12 chart columns instead of 6
+await page.goto("http://localhost:3000/app/reports");
+const defaultBucketCount = await page.getByTestId("report-month-bucket").count();
+check("reports page defaults to a 6-month window", defaultBucketCount === 6, `count=${defaultBucketCount}`);
+
+await page.goto("http://localhost:3000/app/reports?months=12");
+const twelveMonthBucketCount = await page.getByTestId("report-month-bucket").count();
+check(
+  "reports page renders 12 chart columns when months=12",
+  twelveMonthBucketCount === 12,
+  `count=${twelveMonthBucketCount}`
+);
+
 await browser.close();
 
 const failed = results.filter((r) => !r.ok);

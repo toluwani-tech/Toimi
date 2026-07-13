@@ -5,7 +5,8 @@ management (CRM), quoting, job/schedule tracking, invoicing with payment trackin
 credit notes and estimated late-fee interest), expense tracking, business reports, an
 in-app AI copilot, and a platform-wide admin dashboard.
 This repo currently covers **Phase 0 (foundation)** through **Module 13 (Admin
-Dashboard)**, plus a credit-notes/late-fee-interest follow-up to Invoices — see
+Dashboard)**, plus follow-ups to Invoices (credit notes, late-fee interest) and Reports
+(CSV export, date-range picker) — see
 [twinkling-knitting-moth.md](../.claude/plans/twinkling-knitting-moth.md) for the full
 phased plan and roadmap of the remaining modules.
 
@@ -129,10 +130,13 @@ the call succeeds or falls back to the friendly 502 → confirm message history 
 across a reload), and a credit-notes/late-fee check (create an overdue, unpaid invoice →
 confirm the overdue badge and an estimated late-fee interest line both appear → create a
 credit note against it → confirm the balance due drops by exactly the credited amount and
-its PDF downloads validly), and an admin dashboard check (confirm `/admin` redirects a
+its PDF downloads validly), an admin dashboard check (confirm `/admin` redirects a
 regular user → flip `isPlatformAdmin` for the test user directly via SQL, the only way to
-reach it → confirm `/admin` now loads and shows the test company and test user). It
-intentionally doesn't need `OPENAI_API_KEY` for the
+reach it → confirm `/admin` now loads and shows the test company and test user), and a
+Reports follow-up check (download the Expenses and Invoices CSV exports and confirm both
+are `text/csv` with expected known values → confirm `/app/reports` defaults to a 6-month
+chart window and `?months=12` renders 12 columns). It intentionally doesn't need
+`OPENAI_API_KEY` for the
 starter/copilot checks to pass (both accept a friendly 502 without a key), so it's the
 fast/cheap way to confirm everything except the AI itself works — though when a real key
 is configured (as in this repo's `.env`), the copilot check exercises a real OpenAI
@@ -170,9 +174,9 @@ src/
       quotes/                     — Quotes: list, create, detail (+ status actions), edit, PDF route
       jobs/                       — Jobs: list, create, detail (+ status, tasks), edit
       schedule/                   — week-view schedule (plain grid, no calendar library)
-      invoices/                   — Invoices: list (+ stats), create, detail (+ payments), edit, PDF route
+      invoices/                   — Invoices: list (+ stats), create, detail (+ payments), edit, PDF route, export route
         credit-notes/, [id]/credit-notes/  — credit note actions/PDF route + creation page
-      expenses/                   — Expenses: list (+ stats), create, edit, inline delete
+      expenses/                   — Expenses: list (+ stats), create, edit, inline delete, export route
       reports/                     — Reports: monthly revenue/expenses, category breakdown, top customers, job profitability
       copilot/                     — AI Copilot chat page
     admin/                       — platform-wide dashboard: companies, users, stats (gated by isPlatformAdmin)
@@ -186,6 +190,7 @@ src/
   lib/
     auth.ts, rbac.ts, db.ts       — auth config, RBAC guards, Prisma client
     money.ts                      — shared line-item totals math (Quotes + Invoices)
+    csv.ts                       — shared CSV escaping/formatting helper
     starter/                      — knowledge base, state machine, OpenAI wrapper, schemas
     customers/                    — customer form validation
     quotes/                       — status transitions, schemas, PDF generation

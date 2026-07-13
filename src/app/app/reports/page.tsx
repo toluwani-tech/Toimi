@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { expenseCategoryLabel } from "@/lib/expenses/labels";
@@ -8,7 +9,21 @@ import { buildMonthlyRevenueExpense, sumByCategory } from "@/lib/reports/aggrega
 import { db } from "@/lib/db";
 import { requireCompany } from "@/lib/rbac";
 
-export default async function ReportsPage() {
+const MONTH_OPTIONS = [3, 6, 12] as const;
+type MonthsOption = (typeof MONTH_OPTIONS)[number];
+
+function parseMonths(value: string | undefined): MonthsOption {
+  const parsed = Number(value);
+  return (MONTH_OPTIONS as readonly number[]).includes(parsed) ? (parsed as MonthsOption) : 6;
+}
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ months?: string }>;
+}) {
+  const { months: monthsParam } = await searchParams;
+  const months = parseMonths(monthsParam);
   const { company } = await requireCompany();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -29,7 +44,7 @@ export default async function ReportsPage() {
     }),
   ]);
 
-  const monthlyBuckets = buildMonthlyRevenueExpense(payments, expenses, now, 6);
+  const monthlyBuckets = buildMonthlyRevenueExpense(payments, expenses, now, months);
   const currentMonthBucket = monthlyBuckets[monthlyBuckets.length - 1];
   const maxCents = Math.max(1, ...monthlyBuckets.flatMap((bucket) => [bucket.revenueCents, bucket.expenseCents]));
 
@@ -86,15 +101,28 @@ export default async function ReportsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex items-center justify-between">
           <CardTitle>
-            <h2>Liikevaihto ja kulut (6 kuukautta)</h2>
+            <h2>Liikevaihto ja kulut ({months} kuukautta)</h2>
           </CardTitle>
+          <div className="flex gap-2">
+            {MONTH_OPTIONS.map((option) => (
+              <Button
+                key={option}
+                size="sm"
+                variant={option === months ? "default" : "outline"}
+                nativeButton={false}
+                render={<Link href={`/app/reports?months=${option}`} />}
+              >
+                {option} kk
+              </Button>
+            ))}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex items-end gap-4">
             {monthlyBuckets.map((bucket) => (
-              <div key={bucket.key} className="flex flex-1 flex-col items-center gap-1">
+              <div key={bucket.key} data-testid="report-month-bucket" className="flex flex-1 flex-col items-center gap-1">
                 <div className="flex h-32 items-end gap-1">
                   <div
                     className="w-3 rounded-t bg-primary"

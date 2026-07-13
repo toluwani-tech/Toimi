@@ -58,9 +58,14 @@ export default async function InvoicesPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Laskut</h1>
-        <Button nativeButton={false} render={<Link href="/app/invoices/new" />}>
-          Uusi lasku
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link href="/app/invoices/export" />}>
+            Vie CSV
+          </Button>
+          <Button nativeButton={false} render={<Link href="/app/invoices/new" />}>
+            Uusi lasku
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-2">
