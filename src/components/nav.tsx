@@ -12,7 +12,7 @@ export function Nav() {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
+        <Link href="/" className="font-heading text-xl font-semibold tracking-tight text-primary">
           Toimi
         </Link>
         <nav className="flex items-center gap-2">

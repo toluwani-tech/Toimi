@@ -1,9 +1,71 @@
 import Link from "next/link";
+import {
+  BarChart3,
+  FileText,
+  Hammer,
+  Receipt,
+  Sparkles,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireCompany } from "@/lib/rbac";
 
 const upcomingModules = ["Dokumenttien tallennus", "Ilmoitukset", "Ylläpitäjän hallintapaneeli"];
+
+const modules = [
+  {
+    title: "Asiakkuudet (CRM)",
+    description: "Hallinnoi asiakkaita ja muistiinpanoja.",
+    icon: Users,
+    links: [{ href: "/app/customers", label: "Avaa asiakkaat" }],
+  },
+  {
+    title: "Tarjoukset",
+    description: "Luo tarjouksia, seuraa tilaa ja lataa PDF.",
+    icon: FileText,
+    links: [{ href: "/app/quotes", label: "Avaa tarjoukset" }],
+  },
+  {
+    title: "Työt ja aikataulu",
+    description: "Hallinnoi töitä, tehtäviä ja viikkoaikataulua.",
+    icon: Hammer,
+    links: [
+      { href: "/app/jobs", label: "Avaa työt" },
+      { href: "/app/schedule", label: "Avaa aikataulu" },
+    ],
+  },
+  {
+    title: "Laskut",
+    description: "Luo laskuja, kirjaa maksuja ja seuraa avoimia saatavia.",
+    icon: Receipt,
+    links: [{ href: "/app/invoices", label: "Avaa laskut" }],
+  },
+  {
+    title: "Kulut",
+    description: "Seuraa materiaali-, polttoaine- ja kalustokuluja.",
+    icon: Wallet,
+    links: [{ href: "/app/expenses", label: "Avaa kulut" }],
+  },
+  {
+    title: "Raportit",
+    description: "Liikevaihto, kulut, parhaat asiakkaat ja töiden kannattavuus.",
+    icon: BarChart3,
+    links: [{ href: "/app/reports", label: "Avaa raportit" }],
+  },
+  {
+    title: "AI-copilot",
+    description: "Kysy yrityksesi tiedoista ja saa toimialaneuvontaa.",
+    icon: Sparkles,
+    links: [{ href: "/app/copilot", label: "Avaa copilot" }],
+  },
+] satisfies {
+  title: string;
+  description: string;
+  icon: typeof Users;
+  links: { href: string; label: string }[];
+}[];
 
 export default async function AppDashboardPage() {
   const { user, membership } = await requireCompany();
@@ -17,106 +79,32 @@ export default async function AppDashboardPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Asiakkuudet (CRM)</h2>
-          </CardTitle>
-          <CardDescription>Hallinnoi asiakkaita ja muistiinpanoja.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/customers" className="text-sm underline underline-offset-4">
-            Avaa asiakkaat →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Tarjoukset</h2>
-          </CardTitle>
-          <CardDescription>Luo tarjouksia, seuraa tilaa ja lataa PDF.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/quotes" className="text-sm underline underline-offset-4">
-            Avaa tarjoukset →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Työt ja aikataulu</h2>
-          </CardTitle>
-          <CardDescription>Hallinnoi töitä, tehtäviä ja viikkoaikataulua.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex gap-4">
-          <Link href="/app/jobs" className="text-sm underline underline-offset-4">
-            Avaa työt →
-          </Link>
-          <Link href="/app/schedule" className="text-sm underline underline-offset-4">
-            Avaa aikataulu →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Laskut</h2>
-          </CardTitle>
-          <CardDescription>Luo laskuja, kirjaa maksuja ja seuraa avoimia saatavia.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/invoices" className="text-sm underline underline-offset-4">
-            Avaa laskut →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Kulut</h2>
-          </CardTitle>
-          <CardDescription>Seuraa materiaali-, polttoaine- ja kalustokuluja.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/expenses" className="text-sm underline underline-offset-4">
-            Avaa kulut →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Raportit</h2>
-          </CardTitle>
-          <CardDescription>Liikevaihto, kulut, parhaat asiakkaat ja töiden kannattavuus.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/reports" className="text-sm underline underline-offset-4">
-            Avaa raportit →
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>AI-copilot</h2>
-          </CardTitle>
-          <CardDescription>Kysy yrityksesi tiedoista ja saa toimialaneuvontaa.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/app/copilot" className="text-sm underline underline-offset-4">
-            Avaa copilot →
-          </Link>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {modules.map((mod) => (
+          <Card key={mod.title}>
+            <CardHeader>
+              <div className="mb-2 flex size-9 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                <mod.icon className="size-4" />
+              </div>
+              <CardTitle>
+                <h2>{mod.title}</h2>
+              </CardTitle>
+              <CardDescription>{mod.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-x-4 gap-y-1">
+              {mod.links.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {link.label} →
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Card>
         <CardHeader>
