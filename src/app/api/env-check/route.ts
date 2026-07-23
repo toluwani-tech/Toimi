@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 // Delete this file once the deployment env-var issue is confirmed fixed.
 export async function GET() {
   return NextResponse.json({
+    deployMarker: "ssm-iam-fix-v2",
     NODE_ENV: process.env.NODE_ENV ?? null,
     hasDatabaseUrl: Boolean(process.env.DATABASE_URL),
     hasNextAuthSecret: Boolean(process.env.NEXTAUTH_SECRET),
